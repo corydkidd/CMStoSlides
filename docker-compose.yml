@@ -1,0 +1,23 @@
+services:
+  app:
+    build: .
+    container_name: cms-converter
+    restart: unless-stopped
+    ports:
+      - "3002:3000"  # Using port 3002 (3000 and 3001 already in use)
+    environment:
+      - NODE_ENV=production
+      # Point to host machine's Supabase instance
+      - NEXT_PUBLIC_SUPABASE_URL=http://192.168.4.145:54321
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CRON_SECRET=${CRON_SECRET}
+    networks:
+      - web
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  web:
+    external: true

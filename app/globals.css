@@ -1,26 +1,227 @@
 @import "tailwindcss";
 
+/* ============================================
+   ADVIENT DESIGN SYSTEM v2.0
+   ============================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ============================================
+     LIGHT MODE (Default)
+     ============================================ */
+
+  /* Backgrounds */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-page: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+
+  /* Text */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+
+  /* Borders */
+  --border-primary: #e2e8f0;
+  --border-secondary: #cbd5e1;
+  --border-hover: rgba(0, 217, 255, 0.5);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.05), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-cyan: 0 4px 20px rgba(0, 217, 255, 0.15);
+  --shadow-cyan-lg: 0 8px 30px rgba(0, 217, 255, 0.2);
+
+  /* Card hover glow */
+  --card-hover-shadow: 0 4px 20px rgba(0, 217, 255, 0.15);
+  --card-hover-border: rgba(0, 217, 255, 0.5);
+
+  /* Table hover */
+  --table-hover: rgba(0, 217, 255, 0.05);
 }
+
+.dark {
+  /* ============================================
+     DARK MODE
+     ============================================ */
+
+  /* Backgrounds */
+  --bg-primary: #0A1628;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1f2937;
+  --bg-card: #1a2332;
+  --bg-page: #0A1628;
+
+  /* Text */
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+
+  /* Borders */
+  --border-primary: rgba(255, 255, 255, 0.1);
+  --border-secondary: rgba(255, 255, 255, 0.2);
+  --border-hover: rgba(0, 217, 255, 0.5);
+
+  /* Shadows - more visible cyan glow in dark mode */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.3), 0 4px 6px rgba(0, 0, 0, 0.2);
+  --shadow-cyan: 0 4px 20px rgba(0, 217, 255, 0.25);
+  --shadow-cyan-lg: 0 8px 30px rgba(0, 217, 255, 0.35);
+
+  /* Card hover glow - brighter in dark mode */
+  --card-hover-shadow: 0 4px 20px rgba(0, 217, 255, 0.25);
+  --card-hover-border: rgba(0, 217, 255, 0.5);
+
+  /* Table hover */
+  --table-hover: rgba(0, 217, 255, 0.08);
+}
+
+/* ============================================
+   FIXED COLORS (Same in both modes)
+   ============================================ */
+
+:root, .dark {
+  /* Navy (sidebar, advient bar - always dark) */
+  --navy-deep: #0A1628;
+  --navy-medium: #1A2332;
+  --navy-card: #1a2332;
+
+  /* Cyan accent */
+  --cyan-primary: #00D9FF;
+  --cyan-400: #22d3ee;
+  --cyan-500: #06b6d4;
+  --cyan-600: #0891b2;
+  --cyan-700: #0e7490;
+  --cyan-glow: rgba(0, 217, 255, 0.2);
+  --cyan-dim: rgba(0, 217, 255, 0.1);
+
+  /* Semantic colors */
+  --success: #10B981;
+  --success-light: #D1FAE5;
+  --success-dark: rgba(16, 185, 129, 0.2);
+
+  --warning: #F59E0B;
+  --warning-light: #FEF3C7;
+  --warning-dark: rgba(245, 158, 11, 0.2);
+
+  --error: #EF4444;
+  --error-light: #FEE2E2;
+  --error-dark: rgba(239, 68, 68, 0.2);
+
+  --info: #3B82F6;
+  --info-light: #DBEAFE;
+  --info-dark: rgba(59, 130, 246, 0.2);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+/* Fade in on page load */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Staggered children animation */
+.animate-stagger > * {
+  opacity: 0;
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.animate-stagger > *:nth-child(2) { animation-delay: 50ms; }
+.animate-stagger > *:nth-child(3) { animation-delay: 100ms; }
+.animate-stagger > *:nth-child(4) { animation-delay: 150ms; }
+.animate-stagger > *:nth-child(5) { animation-delay: 200ms; }
+.animate-stagger > *:nth-child(6) { animation-delay: 250ms; }
+
+/* Glow pulse for attention */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 217, 255, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(0, 217, 255, 0.4); }
+}
+
+.animate-glow-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* Skeleton loading */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+.dark .skeleton {
+  background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+  background-size: 200% 100%;
+}
+
+/* ============================================
+   TYPOGRAPHY UTILITIES
+   ============================================ */
+
+.page-title {
+  @apply font-display text-3xl font-bold tracking-tight;
+  @apply text-slate-900 dark:text-white;
+}
+
+.section-header {
+  @apply font-display text-xl font-semibold pl-4 border-l-4 border-cyan-400;
+  @apply text-slate-900 dark:text-white;
+}
+
+.card-title {
+  @apply font-display text-lg font-semibold;
+  @apply text-slate-900 dark:text-white;
+}
+
+.stat-number {
+  @apply font-display text-4xl font-bold tracking-tight;
+}
+
+.body-text {
+  @apply font-body text-base;
+  @apply text-slate-600 dark:text-slate-300;
+}
+
+.caption {
+  @apply font-body text-sm;
+  @apply text-slate-500 dark:text-slate-400;
+}
+
+.label-uppercase {
+  @apply font-display text-xs font-semibold uppercase tracking-wider;
+  @apply text-cyan-600 dark:text-cyan-400;
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), 'Inter', system-ui, sans-serif;
+  color: var(--text-primary);
+}
+
+* {
+  box-sizing: border-box;
 }
