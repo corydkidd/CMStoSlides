@@ -7,6 +7,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { StatCard } from '@/components/admin/StatCard';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { FederalRegisterMonitor } from '@/components/admin/FederalRegisterMonitor';
 import { signOut } from '@/lib/auth/actions';
 
 interface AdminDashboardClientProps {
@@ -143,6 +144,9 @@ export function AdminDashboardClient({ user, profile, users, recentJobs }: Admin
             </Link>
           </div>
         </section>
+
+        {/* Federal Register Monitor */}
+        <FederalRegisterMonitor />
 
         {/* Recent Activity */}
         <section>
