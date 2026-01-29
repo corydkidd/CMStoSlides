@@ -18,8 +18,16 @@ export async function POST(request: Request) {
         },
         setAll(cookiesToSet: any) {
           cookiesToSet.forEach(({ name, value, options }: any) => {
-            cookieStore.set(name, value, options);
-            response.cookies.set(name, value, options);
+            // Override cookie options to work with IP addresses in development
+            const cookieOptions = {
+              ...options,
+              sameSite: 'lax' as const,
+              secure: false, // Allow non-HTTPS in development
+              httpOnly: true,
+              path: '/',
+            };
+            cookieStore.set(name, value, cookieOptions);
+            response.cookies.set(name, value, cookieOptions);
           });
         },
       },

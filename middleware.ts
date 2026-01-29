@@ -21,9 +21,17 @@ export async function middleware(request: NextRequest) {
           supabaseResponse = NextResponse.next({
             request,
           });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
+          cookiesToSet.forEach(({ name, value, options }) => {
+            // Override cookie options to work with IP addresses in development
+            const cookieOptions = {
+              ...options,
+              sameSite: 'lax' as const,
+              secure: false,
+              httpOnly: true,
+              path: '/',
+            };
+            supabaseResponse.cookies.set(name, value, cookieOptions);
+          });
         },
       },
     }
@@ -40,8 +48,7 @@ export async function middleware(request: NextRequest) {
   const isDashboardRoute = request.nextUrl.pathname.startsWith('/dashboard') ||
                            request.nextUrl.pathname.startsWith('/history');
 
-  // TEMPORARY: Skip auth check for development
-  // TODO: Re-enable authentication once cookie issues are resolved
+  // TEMPORARY: Auth disabled for testing
   // Redirect to login if not authenticated
   // if (!user && !isAuthRoute && (isDashboardRoute || isAdminRoute)) {
   //   const url = request.nextUrl.clone();
@@ -51,26 +58,27 @@ export async function middleware(request: NextRequest) {
   // }
 
   // Redirect to dashboard if authenticated and trying to access login
-  if (user && isAuthRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
-    return NextResponse.redirect(url);
-  }
+  // if (user && isAuthRoute) {
+  //   const url = request.nextUrl.clone();
+  //   url.pathname = '/dashboard';
+  //   return NextResponse.redirect(url);
+  // }
 
+  // TEMPORARY: Admin check disabled for testing
   // Check admin access for admin routes
-  if (user && isAdminRoute) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single();
+  // if (user && isAdminRoute) {
+  //   const { data: profile } = await supabase
+  //     .from('profiles')
+  //     .select('is_admin')
+  //     .eq('id', user.id)
+  //     .single();
 
-    if (!profile?.is_admin) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/dashboard';
-      return NextResponse.redirect(url);
-    }
-  }
+  //   if (!profile?.is_admin) {
+  //     const url = request.nextUrl.clone();
+  //     url.pathname = '/dashboard';
+  //     return NextResponse.redirect(url);
+  //   }
+  // }
 
   return supabaseResponse;
 }

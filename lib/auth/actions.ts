@@ -8,6 +8,8 @@ export async function signIn(formData: FormData) {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
 
+  console.log('[signIn] Attempting login for:', email);
+
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -16,14 +18,17 @@ export async function signIn(formData: FormData) {
   });
 
   if (error) {
-    return { error: error.message };
+    console.log('[signIn] Login error:', error.message);
+    redirect(`/login?error=${encodeURIComponent(error.message)}`);
   }
 
   // Verify the session was created
   if (!data.session) {
-    return { error: 'Failed to create session' };
+    console.log('[signIn] No session created');
+    redirect('/login?error=Failed+to+create+session');
   }
 
+  console.log('[signIn] Login successful for user:', data.user.id);
   revalidatePath('/', 'layout');
   redirect('/dashboard');
 }

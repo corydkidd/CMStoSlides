@@ -1,0 +1,8 @@
+# CMS to Slides - Federal Register Monitor & Job Processor
+# Add these lines to your crontab: crontab -e
+
+# Check Federal Register for new CMS documents every 15 minutes
+*/15 * * * * /home/coryk/server/CMStoSlides/scripts/check-federal-register.sh
+
+# Process conversion jobs every minute
+*/1 * * * * /home/coryk/server/CMStoSlides/scripts/process-jobs.sh

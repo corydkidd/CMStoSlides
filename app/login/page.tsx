@@ -1,65 +1,13 @@
-'use client';
-
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { signIn } from '@/lib/auth/actions';
 import { Button } from '@/components/ui/Button';
 import { AdvientBar } from '@/components/layout/AdvientBar';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 
-export default function LoginPage() {
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
-  const supabase = createClient();
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    const formData = new FormData(event.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-
-    try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) {
-        setError(signInError.message);
-        setLoading(false);
-        return;
-      }
-
-      if (!data.session) {
-        setError('Failed to create session');
-        setLoading(false);
-        return;
-      }
-
-      // Sync session to server-side cookies
-      await fetch('/api/auth/set-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-        }),
-      });
-
-      // Success - redirect to dashboard
-      router.push('/dashboard');
-      router.refresh();
-    } catch (err) {
-      setError('An unexpected error occurred');
-      setLoading(false);
-    }
-  }
+export default async function LoginPage(props: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const searchParams = await props.searchParams;
+  const error = searchParams.error;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-cyan-50/20 to-slate-100 dark:from-[#0A1628] dark:to-[#1A2332] p-4">
@@ -79,7 +27,7 @@ export default function LoginPage() {
 
         {/* Login Form */}
         <div className="bg-white dark:bg-[#1A2332] rounded-2xl shadow-xl border border-slate-200 dark:border-white/10 p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form action={signIn} className="space-y-6">
             {error && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
                 <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
@@ -131,18 +79,11 @@ export default function LoginPage() {
             {/* Submit Button */}
             <Button
               type="submit"
-              disabled={loading}
               className="w-full"
               size="lg"
             >
-              {loading ? (
-                <span>Signing in...</span>
-              ) : (
-                <>
-                  <span>Sign In</span>
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
+              <span>Sign In</span>
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </form>
 

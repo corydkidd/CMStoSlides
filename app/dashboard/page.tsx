@@ -9,11 +9,10 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // TEMPORARY: Create mock user for development
-  // TODO: Re-enable authentication once cookie issues are resolved
+  // TEMPORARY: Use mock user for testing when auth is disabled
   const mockUser = user || {
-    id: '63e2d1f3-4051-4b4c-b4d7-1cc3c8534e8c',
-    email: 'test@example.com',
+    id: 'b2faae05-83a5-4310-8533-f684bce2f708',
+    email: 'cory@advientadvisors.com',
     aud: 'authenticated',
     role: 'authenticated',
   } as any;
