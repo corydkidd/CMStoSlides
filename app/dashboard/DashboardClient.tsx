@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { Home, History, LogOut, ArrowRight } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
@@ -9,6 +9,7 @@ import { UploadZone } from '@/components/dashboard/UploadZone';
 import { JobCard } from '@/components/dashboard/JobCard';
 import { Button } from '@/components/ui/Button';
 import { signOut } from '@/lib/auth/actions';
+import { createClient } from '@/lib/supabase/client';
 
 interface DashboardClientProps {
   user: User;
@@ -18,7 +19,49 @@ interface DashboardClientProps {
 
 export function DashboardClient({ user, profile, initialJobs }: DashboardClientProps) {
   const [jobs, setJobs] = useState(initialJobs);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // ---------------------------------------------------------------------------
+  // Polling: refresh jobs every 5 seconds while any are pending/processing
+  // ---------------------------------------------------------------------------
+  const hasActiveJobs = jobs.some(
+    (j) => j.status === 'pending' || j.status === 'processing'
+  );
+
+  const refreshJobs = useCallback(async () => {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('conversion_jobs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (!error && data) {
+        setJobs(data);
+      }
+    } catch {
+      // Silently ignore polling errors
+    }
+  }, [user.id]);
+
+  useEffect(() => {
+    if (hasActiveJobs) {
+      // Start polling
+      pollingRef.current = setInterval(refreshJobs, 5000);
+    }
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [hasActiveJobs, refreshJobs]);
+
+  // ---------------------------------------------------------------------------
+  // Upload handler
+  // ---------------------------------------------------------------------------
   const handleUpload = async (file: File) => {
     // TODO: Implement upload functionality in Phase 2
     console.log('Uploading file:', file.name);
@@ -30,11 +73,38 @@ export function DashboardClient({ user, profile, initialJobs }: DashboardClientP
     throw new Error('Upload functionality will be implemented in Phase 2');
   };
 
+  // ---------------------------------------------------------------------------
+  // Download handler
+  // ---------------------------------------------------------------------------
   const handleDownload = async (jobId: string) => {
-    // TODO: Implement download functionality in Phase 2
-    console.log('Downloading job:', jobId);
+    try {
+      const response = await fetch(`/api/jobs/${jobId}/download`);
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || 'Download failed');
+      }
+
+      const { url, filename } = await response.json();
+
+      // Trigger download via hidden anchor
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename || 'presentation.pptx';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Download error:', err);
+      alert(
+        err instanceof Error ? err.message : 'Failed to download file'
+      );
+    }
   };
 
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
   const navItems = [
     {
       href: '/dashboard',
@@ -89,7 +159,12 @@ export function DashboardClient({ user, profile, initialJobs }: DashboardClientP
         {/* Recent Conversions */}
         <section>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="section-header">Recent Conversions</h2>
+            <h2 className="section-header">
+              Recent Conversions
+              {hasActiveJobs && (
+                <span className="ml-2 inline-block w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
+              )}
+            </h2>
             {jobs.length > 0 && (
               <Link href="/history">
                 <Button variant="ghost" size="sm" className="gap-2">
