@@ -16,7 +16,7 @@ export const authOptions: NextAuthOptions = {
       token: 'https://auth.sumispartners.com/application/o/token/',
       userinfo: 'https://auth.sumispartners.com/application/o/userinfo/',
       issuer: process.env.AUTHENTIK_ISSUER!,
-      jwks_endpoint: 'https://auth.sumispartners.com/application/o/cms-converter/jwks/',
+      jwks_endpoint: 'https://auth.sumispartners.com/application/o/sumis-partners/jwks/',
       checks: ['pkce', 'state'],
       profile(profile) {
         return {
