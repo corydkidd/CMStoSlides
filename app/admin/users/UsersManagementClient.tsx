@@ -1,15 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { signOut } from 'next-auth/react';
 import { LayoutDashboard, Users, FileText, LogOut, Settings, Plus, Search } from 'lucide-react';
-import type { User } from '@supabase/supabase-js';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { signOut } from '@/lib/auth/actions';
 
 interface UsersManagementClientProps {
-  user: User;
+  user: { id: string; email: string; name: string | null };
   profile: any;
   users: any[];
 }
@@ -17,33 +16,16 @@ interface UsersManagementClientProps {
 export function UsersManagementClient({ user, profile, users }: UsersManagementClientProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredUsers = users.filter(u =>
+  const filteredUsers = users.filter((u: any) =>
     u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const navItems = [
-    {
-      href: '/admin',
-      label: 'Dashboard',
-      icon: LayoutDashboard,
-    },
-    {
-      href: '/admin/users',
-      label: 'Users',
-      icon: Users,
-      badge: users.length.toString(),
-    },
-    {
-      href: '/admin/jobs',
-      label: 'All Jobs',
-      icon: FileText,
-    },
-    {
-      href: '/dashboard',
-      label: 'User View',
-      icon: Settings,
-    },
+    { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/admin/users', label: 'Users', icon: Users, badge: users.length.toString() },
+    { href: '/admin/jobs', label: 'All Jobs', icon: FileText },
+    { href: '/dashboard', label: 'User View', icon: Settings },
   ];
 
   const formatDate = (dateString: string) => {
@@ -65,15 +47,13 @@ export function UsersManagementClient({ user, profile, users }: UsersManagementC
           <p className="text-sm text-white/80 font-medium truncate">
             {profile?.full_name || user.email}
           </p>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors w-full"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </button>
-          </form>
+          <button
+            onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+            className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors w-full"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
         </div>
       }
     >
@@ -106,7 +86,7 @@ export function UsersManagementClient({ user, profile, users }: UsersManagementC
 
         {/* Users List */}
         <div className="space-y-4">
-          {filteredUsers.map((u) => (
+          {filteredUsers.map((u: any) => (
             <div
               key={u.id}
               className="p-6 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1A2332] hover:border-cyan-400/30 hover:shadow-md transition-all"
@@ -117,23 +97,13 @@ export function UsersManagementClient({ user, profile, users }: UsersManagementC
                     <h3 className="font-display font-semibold text-slate-900 dark:text-white">
                       {u.full_name || 'No name set'}
                     </h3>
-                    {u.is_admin && (
-                      <Badge variant="default">Admin</Badge>
-                    )}
-                    {!u.is_active && (
-                      <Badge variant="error">Inactive</Badge>
-                    )}
-                    {u.is_active && !u.is_admin && (
-                      <Badge variant="success">Active</Badge>
-                    )}
+                    {u.is_admin && <Badge variant="default">Admin</Badge>}
+                    {!u.is_active && <Badge variant="error">Inactive</Badge>}
+                    {u.is_active && !u.is_admin && <Badge variant="success">Active</Badge>}
                   </div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                    {u.email}
-                  </p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">{u.email}</p>
                   <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-                    <span>
-                      {u.conversion_jobs?.[0]?.count || 0} conversions
-                    </span>
+                    <span>{u.conversion_jobs?.[0]?.count || 0} conversions</span>
                     <span>•</span>
                     <span>Joined {formatDate(u.created_at)}</span>
                     {u.template_path && (
@@ -146,15 +116,9 @@ export function UsersManagementClient({ user, profile, users }: UsersManagementC
                 </div>
 
                 <div className="flex gap-2">
-                  <Button size="sm" variant="secondary">
-                    Edit
-                  </Button>
-                  <Button size="sm" variant="secondary">
-                    Description
-                  </Button>
-                  <Button size="sm" variant="secondary">
-                    Template
-                  </Button>
+                  <Button size="sm" variant="secondary">Edit</Button>
+                  <Button size="sm" variant="secondary">Description</Button>
+                  <Button size="sm" variant="secondary">Template</Button>
                 </div>
               </div>
             </div>
@@ -163,9 +127,7 @@ export function UsersManagementClient({ user, profile, users }: UsersManagementC
           {filteredUsers.length === 0 && (
             <div className="text-center py-12 bg-white dark:bg-[#1A2332] rounded-xl border border-slate-200 dark:border-white/10">
               <Users className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-600 dark:text-slate-400">
-                No users found
-              </p>
+              <p className="text-slate-600 dark:text-slate-400">No users found</p>
             </div>
           )}
         </div>

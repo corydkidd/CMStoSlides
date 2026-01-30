@@ -1,142 +1,113 @@
 /**
  * Federal Register Document Reprocess Endpoint
- *
- * Re-queue a failed or skipped document
  */
 
-import { createServerClient } from '@/lib/supabase/server';
-import { createClient } from '@supabase/supabase-js';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+import { saveUpload } from '@/lib/storage';
 import { downloadFederalRegisterPDF } from '@/lib/federal-register';
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const supabase = await createServerClient();
+    const { id: documentId } = await params;
 
-    // Check if user is admin
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single();
+    const authentikId = (session.user as any).authentikId;
+    const dbUser = await prisma.user.findUnique({ where: { authentikId } });
 
-    if (!profile?.is_admin) {
+    if (!dbUser?.isAdmin) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const documentId = params.id;
-
     // Get the document
-    const { data: frDoc, error: fetchError } = await supabase
-      .from('federal_register_documents')
-      .select('*')
-      .eq('id', documentId)
-      .single();
+    const frDoc = await prisma.federalRegisterDocument.findUnique({
+      where: { id: documentId },
+    });
 
-    if (fetchError || !frDoc) {
+    if (!frDoc) {
       return Response.json({ error: 'Document not found' }, { status: 404 });
     }
 
-    // Create service role client for processing
-    const serviceSupabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
     // Get settings for target user
-    const { data: settings } = await serviceSupabase
-      .from('federal_register_settings')
-      .select('*')
-      .single();
-
+    const settings = await prisma.federalRegisterSettings.findFirst();
     if (!settings) {
       return Response.json({ error: 'Settings not found' }, { status: 500 });
     }
 
     // Reset document status
-    await serviceSupabase
-      .from('federal_register_documents')
-      .update({
-        processing_status: 'pending',
-        error_message: null,
-        conversion_job_id: null,
-      })
-      .eq('id', documentId);
+    await prisma.federalRegisterDocument.update({
+      where: { id: documentId },
+      data: {
+        processingStatus: 'pending',
+        errorMessage: null,
+        conversionJobId: null,
+      },
+    });
 
     // Process the document
     try {
       // Update status to downloading
-      await serviceSupabase
-        .from('federal_register_documents')
-        .update({ processing_status: 'downloading' })
-        .eq('id', frDoc.id);
+      await prisma.federalRegisterDocument.update({
+        where: { id: frDoc.id },
+        data: { processingStatus: 'downloading' },
+      });
 
       // Download PDF
-      const pdfBuffer = await downloadFederalRegisterPDF(frDoc.pdf_url);
-      const pdfBlob = new Blob([pdfBuffer], { type: 'application/pdf' });
+      const pdfArrayBuffer = await downloadFederalRegisterPDF(frDoc.pdfUrl);
+      const pdfBuffer = Buffer.from(pdfArrayBuffer);
 
-      // Generate filename
-      const filename = `${frDoc.document_number}.pdf`;
-      const storagePath = `${frDoc.target_user_id}/uploads/${Date.now()}_${filename}`;
+      // Save to local storage
+      const filename = `${frDoc.documentNumber}.pdf`;
+      const targetUserId = frDoc.targetUserId || settings.defaultTargetUserId;
 
-      // Upload to Supabase Storage
-      const { error: uploadError } = await serviceSupabase.storage
-        .from('uploads')
-        .upload(storagePath, pdfBlob, {
-          contentType: 'application/pdf',
-        });
-
-      if (uploadError) {
-        throw new Error(`Storage upload failed: ${uploadError.message}`);
+      if (!targetUserId) {
+        throw new Error('No target user configured');
       }
 
+      const storagePath = await saveUpload(targetUserId, filename, pdfBuffer);
+
       // Update FR doc
-      await serviceSupabase
-        .from('federal_register_documents')
-        .update({
-          pdf_downloaded_at: new Date().toISOString(),
-          processing_status: 'queued',
-        })
-        .eq('id', frDoc.id);
+      await prisma.federalRegisterDocument.update({
+        where: { id: frDoc.id },
+        data: {
+          pdfDownloadedAt: new Date(),
+          processingStatus: 'queued',
+        },
+      });
 
       // Create conversion job
-      const { data: job, error: jobError } = await serviceSupabase
-        .from('conversion_jobs')
-        .insert({
-          user_id: frDoc.target_user_id,
+      const job = await prisma.conversionJob.create({
+        data: {
+          userId: targetUserId,
           status: 'pending',
-          input_filename: filename,
-          input_path: storagePath,
-          input_size_bytes: pdfBuffer.byteLength,
+          inputFilename: filename,
+          inputPath: storagePath,
+          inputSizeBytes: BigInt(pdfBuffer.byteLength),
           metadata: {
             source: 'federal_register',
             federal_register_id: frDoc.id,
-            document_number: frDoc.document_number,
+            document_number: frDoc.documentNumber,
             citation: frDoc.citation,
           },
-        })
-        .select()
-        .single();
-
-      if (jobError) {
-        throw new Error(`Job creation failed: ${jobError.message}`);
-      }
+        },
+      });
 
       // Link job to FR document
-      await serviceSupabase
-        .from('federal_register_documents')
-        .update({
-          conversion_job_id: job.id,
-          processing_status: 'processing',
-        })
-        .eq('id', frDoc.id);
+      await prisma.federalRegisterDocument.update({
+        where: { id: frDoc.id },
+        data: {
+          conversionJobId: job.id,
+          processingStatus: 'processing',
+        },
+      });
 
       return Response.json({
         success: true,
@@ -144,14 +115,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
         job_id: job.id,
       });
     } catch (error: any) {
-      await serviceSupabase
-        .from('federal_register_documents')
-        .update({
-          processing_status: 'failed',
-          error_message: error.message,
-        })
-        .eq('id', frDoc.id);
-
+      await prisma.federalRegisterDocument.update({
+        where: { id: frDoc.id },
+        data: {
+          processingStatus: 'failed',
+          errorMessage: error.message,
+        },
+      });
       throw error;
     }
   } catch (error: any) {

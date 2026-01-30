@@ -1,43 +1,57 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 import { UsersManagementClient } from './UsersManagementClient';
 
 export default async function UsersManagementPage() {
-  const supabase = await createClient();
+  const session = await getServerSession(authOptions);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
+  if (!session?.user) {
+    redirect('/auth/signin');
   }
 
-  // Check if user is admin
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+  const authentikId = (session.user as any).authentikId;
+  const dbUser = await prisma.user.findUnique({
+    where: { authentikId },
+  });
 
-  if (!(profile as any)?.is_admin) {
+  if (!dbUser || !dbUser.isAdmin) {
     redirect('/dashboard');
   }
 
   // Fetch all users with their job counts
-  const { data: users } = await supabase
-    .from('profiles')
-    .select(`
-      *,
-      conversion_jobs (count)
-    `)
-    .order('created_at', { ascending: false });
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      _count: {
+        select: { conversionJobs: true },
+      },
+    },
+  });
 
   return (
     <UsersManagementClient
-      user={user}
-      profile={profile}
-      users={users || []}
+      user={{
+        id: dbUser.id,
+        email: dbUser.email,
+        name: dbUser.name,
+      }}
+      profile={{
+        full_name: dbUser.name,
+        email: dbUser.email,
+        is_admin: dbUser.isAdmin,
+      }}
+      users={users.map((u) => ({
+        id: u.id,
+        email: u.email,
+        full_name: u.name,
+        is_active: u.isActive,
+        is_admin: u.isAdmin,
+        template_path: u.templatePath,
+        created_at: u.createdAt.toISOString(),
+        conversion_jobs: [{ count: u._count.conversionJobs }],
+      }))}
     />
   );
 }

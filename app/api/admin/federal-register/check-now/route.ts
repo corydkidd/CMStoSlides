@@ -1,36 +1,27 @@
 /**
  * Federal Register Manual Check Endpoint
- *
- * Manually trigger a Federal Register check (for testing)
  */
 
-import { createServerClient } from '@/lib/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 
 export async function POST() {
   try {
-    const supabase = await createServerClient();
-
-    // Check if user is admin
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single();
+    const authentikId = (session.user as any).authentikId;
+    const dbUser = await prisma.user.findUnique({ where: { authentikId } });
 
-    if (!profile?.is_admin) {
+    if (!dbUser?.isAdmin) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Trigger the cron endpoint internally
-    const cronUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/cron/check-federal-register`;
+    const cronUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/cron/check-federal-register`;
 
     const response = await fetch(cronUrl, {
       method: 'POST',

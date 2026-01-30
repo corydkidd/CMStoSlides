@@ -1,106 +1,33 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 
-export async function signIn(formData: FormData) {
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
-
-  console.log('[signIn] Attempting login for:', email);
-
-  const supabase = await createClient();
-
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) {
-    console.log('[signIn] Login error:', error.message);
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
-  }
-
-  // Verify the session was created
-  if (!data.session) {
-    console.log('[signIn] No session created');
-    redirect('/login?error=Failed+to+create+session');
-  }
-
-  console.log('[signIn] Login successful for user:', data.user.id);
-  revalidatePath('/', 'layout');
-  redirect('/dashboard');
-}
-
-export async function signUp(formData: FormData) {
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
-  const fullName = formData.get('fullName') as string;
-
-  const supabase = await createClient();
-
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        full_name: fullName,
-      },
-    },
-  });
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  revalidatePath('/', 'layout');
-  redirect('/dashboard');
-}
-
-export async function signOut() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-  revalidatePath('/', 'layout');
-  redirect('/login');
-}
-
-export async function signInWithProvider(provider: 'google' | 'azure') {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider,
-    options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
-    },
-  });
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  if (data.url) {
-    redirect(data.url);
-  }
-}
-
+/**
+ * Get the current authenticated user with their DB profile.
+ * Returns null if not authenticated.
+ */
 export async function getCurrentUser() {
-  const supabase = await createClient();
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return null;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const authentikId = (session.user as any).authentikId;
+  if (!authentikId) return null;
 
-  if (!user) return null;
+  const dbUser = await prisma.user.findUnique({
+    where: { authentikId },
+  });
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+  if (!dbUser) return null;
 
   return {
-    ...user,
-    profile,
+    id: dbUser.id,
+    email: dbUser.email,
+    name: dbUser.name,
+    profileImage: dbUser.profileImage,
+    isAdmin: dbUser.isAdmin,
+    isActive: dbUser.isActive,
+    templatePath: dbUser.templatePath,
   };
 }

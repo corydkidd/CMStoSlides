@@ -1,46 +1,63 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 import { JobsManagementClient } from './JobsManagementClient';
 
 export default async function JobsManagementPage() {
-  const supabase = await createClient();
+  const session = await getServerSession(authOptions);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
+  if (!session?.user) {
+    redirect('/auth/signin');
   }
 
-  // Check if user is admin
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+  const authentikId = (session.user as any).authentikId;
+  const dbUser = await prisma.user.findUnique({
+    where: { authentikId },
+  });
 
-  if (!(profile as any)?.is_admin) {
+  if (!dbUser || !dbUser.isAdmin) {
     redirect('/dashboard');
   }
 
   // Fetch all jobs with user info
-  const { data: jobs } = await supabase
-    .from('conversion_jobs')
-    .select(`
-      *,
-      profiles (
-        email,
-        full_name
-      )
-    `)
-    .order('created_at', { ascending: false });
+  const jobs = await prisma.conversionJob.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      user: {
+        select: {
+          email: true,
+          name: true,
+        },
+      },
+    },
+  });
+
+  // Serialize BigInt and format for client
+  const serializedJobs = jobs.map((j) => ({
+    ...j,
+    inputSizeBytes: j.inputSizeBytes ? Number(j.inputSizeBytes) : null,
+    outputSizeBytes: j.outputSizeBytes ? Number(j.outputSizeBytes) : null,
+    // Map to expected shape for JobCard compatibility
+    profiles: {
+      email: j.user.email,
+      full_name: j.user.name,
+    },
+  }));
 
   return (
     <JobsManagementClient
-      user={user}
-      profile={profile}
-      jobs={jobs || []}
+      user={{
+        id: dbUser.id,
+        email: dbUser.email,
+        name: dbUser.name,
+      }}
+      profile={{
+        full_name: dbUser.name,
+        email: dbUser.email,
+        is_admin: dbUser.isAdmin,
+      }}
+      jobs={serializedJobs}
     />
   );
 }

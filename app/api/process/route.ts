@@ -1,13 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { prisma } from '@/lib/db';
 import { processJob } from '@/lib/job-processor';
-
-function getAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
 
 export async function POST(request: Request) {
   // Verify CRON_SECRET
@@ -25,18 +18,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const supabase = getAdminClient();
-
   // Claim the oldest pending job
-  const { data: job, error: fetchError } = await supabase
-    .from('conversion_jobs')
-    .select('id')
-    .eq('status', 'pending')
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .single();
+  const job = await prisma.conversionJob.findFirst({
+    where: { status: 'pending' },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true },
+  });
 
-  if (fetchError || !job) {
+  if (!job) {
     return NextResponse.json({ message: 'No pending jobs' }, { status: 200 });
   }
 

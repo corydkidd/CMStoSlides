@@ -1,46 +1,52 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 import { DashboardClient } from './DashboardClient';
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
+  const session = await getServerSession(authOptions);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!session?.user) {
+    redirect('/auth/signin');
+  }
 
-  // TEMPORARY: Use mock user for testing when auth is disabled
-  const mockUser = user || {
-    id: 'b2faae05-83a5-4310-8533-f684bce2f708',
-    email: 'cory@advientadvisors.com',
-    aud: 'authenticated',
-    role: 'authenticated',
-  } as any;
+  const authentikId = (session.user as any).authentikId;
+  const dbUser = await prisma.user.findUnique({
+    where: { authentikId },
+  });
 
-  // if (!user) {
-  //   redirect('/login');
-  // }
+  if (!dbUser) {
+    redirect('/auth/signin');
+  }
 
   // Fetch user's recent jobs
-  const { data: jobs } = await supabase
-    .from('conversion_jobs')
-    .select('*')
-    .eq('user_id', mockUser.id)
-    .order('created_at', { ascending: false })
-    .limit(5);
+  const jobs = await prisma.conversionJob.findMany({
+    where: { userId: dbUser.id },
+    orderBy: { createdAt: 'desc' },
+    take: 5,
+  });
 
-  // Fetch user profile
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', mockUser.id)
-    .single();
+  // Serialize BigInt fields for client component
+  const serializedJobs = jobs.map((j) => ({
+    ...j,
+    inputSizeBytes: j.inputSizeBytes ? Number(j.inputSizeBytes) : null,
+    outputSizeBytes: j.outputSizeBytes ? Number(j.outputSizeBytes) : null,
+  }));
 
   return (
     <DashboardClient
-      user={mockUser}
-      profile={profile}
-      initialJobs={jobs || []}
+      user={{
+        id: dbUser.id,
+        email: dbUser.email,
+        name: dbUser.name,
+      }}
+      profile={{
+        full_name: dbUser.name,
+        email: dbUser.email,
+        is_admin: dbUser.isAdmin,
+      }}
+      initialJobs={serializedJobs}
     />
   );
 }

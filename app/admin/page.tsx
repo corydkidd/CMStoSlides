@@ -1,56 +1,73 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 import { AdminDashboardClient } from './AdminDashboardClient';
 
 export default async function AdminDashboardPage() {
-  const supabase = await createClient();
+  const session = await getServerSession(authOptions);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!session?.user) {
+    redirect('/auth/signin');
+  }
 
-  // TEMPORARY: Use mock admin user for testing
-  const mockUser = user || {
-    id: 'b2faae05-83a5-4310-8533-f684bce2f708',
-    email: 'cory@advientadvisors.com',
-    aud: 'authenticated',
-    role: 'authenticated',
-  } as any;
+  const authentikId = (session.user as any).authentikId;
+  const dbUser = await prisma.user.findUnique({
+    where: { authentikId },
+  });
 
-  // if (!user) {
-  //   redirect('/login');
-  // }
-
-  // Check if user is admin
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', mockUser.id)
-    .single();
-
-  // TEMPORARY: Skip admin check for testing
-  // if (!(profile as any)?.is_admin) {
-  //   redirect('/dashboard');
-  // }
+  if (!dbUser || !dbUser.isAdmin) {
+    redirect('/dashboard');
+  }
 
   // Fetch admin dashboard stats
-  const { data: allUsers } = await supabase
-    .from('profiles')
-    .select('id, email, full_name, is_active, created_at')
-    .order('created_at', { ascending: false });
+  const allUsers = await prisma.user.findMany({
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      isActive: true,
+      isAdmin: true,
+      createdAt: true,
+    },
+  });
 
-  const { data: allJobs } = await supabase
-    .from('conversion_jobs')
-    .select('id, status, created_at')
-    .order('created_at', { ascending: false })
-    .limit(10);
+  const recentJobs = await prisma.conversionJob.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+    select: {
+      id: true,
+      status: true,
+      createdAt: true,
+    },
+  });
 
   return (
     <AdminDashboardClient
-      user={mockUser}
-      profile={profile}
-      users={allUsers || []}
-      recentJobs={allJobs || []}
+      user={{
+        id: dbUser.id,
+        email: dbUser.email,
+        name: dbUser.name,
+      }}
+      profile={{
+        full_name: dbUser.name,
+        email: dbUser.email,
+        is_admin: dbUser.isAdmin,
+      }}
+      users={allUsers.map((u) => ({
+        id: u.id,
+        email: u.email,
+        full_name: u.name,
+        is_active: u.isActive,
+        is_admin: u.isAdmin,
+        created_at: u.createdAt.toISOString(),
+      }))}
+      recentJobs={recentJobs.map((j) => ({
+        id: j.id,
+        status: j.status,
+        created_at: j.createdAt.toISOString(),
+      }))}
     />
   );
 }

@@ -2,17 +2,15 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { signOut } from 'next-auth/react';
 import { Home, History, LogOut, ArrowRight } from 'lucide-react';
-import type { User } from '@supabase/supabase-js';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { UploadZone } from '@/components/dashboard/UploadZone';
 import { JobCard } from '@/components/dashboard/JobCard';
 import { Button } from '@/components/ui/Button';
-import { signOut } from '@/lib/auth/actions';
-import { createClient } from '@/lib/supabase/client';
 
 interface DashboardClientProps {
-  user: User;
+  user: { id: string; email: string; name: string | null };
   profile: any;
   initialJobs: any[];
 }
@@ -30,16 +28,10 @@ export function DashboardClient({ user, profile, initialJobs }: DashboardClientP
 
   const refreshJobs = useCallback(async () => {
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('conversion_jobs')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (!error && data) {
-        setJobs(data);
+      const res = await fetch(`/api/jobs?userId=${user.id}&limit=20`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.jobs) setJobs(data.jobs);
       }
     } catch {
       // Silently ignore polling errors
@@ -48,7 +40,6 @@ export function DashboardClient({ user, profile, initialJobs }: DashboardClientP
 
   useEffect(() => {
     if (hasActiveJobs) {
-      // Start polling
       pollingRef.current = setInterval(refreshJobs, 5000);
     }
     return () => {
@@ -63,13 +54,8 @@ export function DashboardClient({ user, profile, initialJobs }: DashboardClientP
   // Upload handler
   // ---------------------------------------------------------------------------
   const handleUpload = async (file: File) => {
-    // TODO: Implement upload functionality in Phase 2
     console.log('Uploading file:', file.name);
-
-    // Placeholder: simulate upload
     await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // In Phase 2, this will call the upload API
     throw new Error('Upload functionality will be implemented in Phase 2');
   };
 
@@ -84,16 +70,17 @@ export function DashboardClient({ user, profile, initialJobs }: DashboardClientP
         throw new Error(body.error || 'Download failed');
       }
 
-      const { url, filename } = await response.json();
-
-      // Trigger download via hidden anchor
+      // The response IS the file now (served directly)
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = filename || 'presentation.pptx';
+      a.download = 'presentation.pptx';
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Download error:', err);
       alert(
@@ -128,15 +115,13 @@ export function DashboardClient({ user, profile, initialJobs }: DashboardClientP
           <p className="text-sm text-white/80 font-medium truncate">
             {profile?.full_name || user.email}
           </p>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors w-full"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </button>
-          </form>
+          <button
+            onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+            className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors w-full"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
         </div>
       }
     >

@@ -1,13 +1,8 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { createClient as createServerClient } from '@/lib/supabase/server';
-
-function getAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+import { getFileBuffer } from '@/lib/storage';
 
 export async function GET(
   request: Request,
@@ -16,66 +11,62 @@ export async function GET(
   const { id: jobId } = await params;
 
   // Verify user is authenticated
-  const supabaseAuth = await createServerClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabaseAuth.auth.getUser();
-
-  if (authError || !user) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const adminClient = getAdminClient();
+  const authentikId = (session.user as any).authentikId;
+  const dbUser = await prisma.user.findUnique({
+    where: { authentikId },
+  });
+
+  if (!dbUser) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
 
   // Fetch the job
-  const { data: job, error: jobError } = await adminClient
-    .from('conversion_jobs')
-    .select('*')
-    .eq('id', jobId)
-    .single();
+  const job = await prisma.conversionJob.findUnique({
+    where: { id: jobId },
+  });
 
-  if (jobError || !job) {
+  if (!job) {
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
 
   // Check ownership or admin
-  const { data: profile } = await adminClient
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single();
-
-  const isAdmin = profile?.is_admin === true;
-  const isOwner = job.user_id === user.id;
+  const isOwner = job.userId === dbUser.id;
+  const isAdmin = dbUser.isAdmin;
 
   if (!isOwner && !isAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   // Verify job is complete with an output path
-  if (job.status !== 'complete' || !job.output_path) {
+  if (job.status !== 'complete' || !job.outputPath) {
     return NextResponse.json(
       { error: 'Job output not available' },
       { status: 400 }
     );
   }
 
-  // Create a signed URL (valid for 60 minutes)
-  const { data: signedData, error: signError } = await adminClient.storage
-    .from('outputs')
-    .createSignedUrl(job.output_path, 3600);
+  // Serve the file directly
+  try {
+    const buffer = await getFileBuffer(job.outputPath);
+    const filename = job.outputFilename || 'presentation.pptx';
 
-  if (signError || !signedData?.signedUrl) {
+    return new NextResponse(buffer, {
+      headers: {
+        'Content-Type':
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Length': buffer.length.toString(),
+      },
+    });
+  } catch {
     return NextResponse.json(
-      { error: 'Failed to generate download URL' },
+      { error: 'Failed to read output file' },
       { status: 500 }
     );
   }
-
-  // Return JSON with URL (let client handle redirect/download)
-  return NextResponse.json({
-    url: signedData.signedUrl,
-    filename: job.output_filename || 'presentation.pptx',
-  });
 }

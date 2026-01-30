@@ -1,71 +1,52 @@
 /**
  * Federal Register Monitor Status Endpoint
- *
- * Returns current settings and recent activity
  */
 
-import { createServerClient } from '@/lib/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 
 export async function GET() {
   try {
-    const supabase = await createServerClient();
-
-    // Check if user is admin
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single();
+    const authentikId = (session.user as any).authentikId;
+    const dbUser = await prisma.user.findUnique({ where: { authentikId } });
 
-    if (!profile?.is_admin) {
+    if (!dbUser?.isAdmin) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Get settings
-    const { data: settings, error: settingsError } = await supabase
-      .from('federal_register_settings')
-      .select('*')
-      .single();
-
-    if (settingsError) {
-      return Response.json({ error: 'Failed to fetch settings' }, { status: 500 });
+    const settings = await prisma.federalRegisterSettings.findFirst();
+    if (!settings) {
+      return Response.json({ error: 'Settings not found' }, { status: 500 });
     }
 
     // Get recent documents
-    const { data: recentDocuments, error: docsError } = await supabase
-      .from('federal_register_documents')
-      .select('*')
-      .order('publication_date', { ascending: false })
-      .limit(10);
-
-    if (docsError) {
-      return Response.json({ error: 'Failed to fetch documents' }, { status: 500 });
-    }
+    const recentDocuments = await prisma.federalRegisterDocument.findMany({
+      orderBy: { publicationDate: 'desc' },
+      take: 10,
+    });
 
     // Get statistics
-    const { count: totalCount } = await supabase
-      .from('federal_register_documents')
-      .select('*', { count: 'exact', head: true });
+    const totalCount = await prisma.federalRegisterDocument.count();
 
-    const { count: todayCount } = await supabase
-      .from('federal_register_documents')
-      .select('*', { count: 'exact', head: true })
-      .gte('detected_at', new Date().toISOString().split('T')[0]);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayCount = await prisma.federalRegisterDocument.count({
+      where: { detectedAt: { gte: todayStart } },
+    });
 
     return Response.json({
       settings,
       recentDocuments,
       stats: {
-        total: totalCount || 0,
-        today: todayCount || 0,
+        total: totalCount,
+        today: todayCount,
       },
     });
   } catch (error: any) {

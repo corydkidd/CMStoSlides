@@ -1,15 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { signOut } from 'next-auth/react';
 import { Home, History, LogOut, Search, Filter } from 'lucide-react';
-import type { User } from '@supabase/supabase-js';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { JobCard } from '@/components/dashboard/JobCard';
 import { Badge } from '@/components/ui/Badge';
-import { signOut } from '@/lib/auth/actions';
 
 interface HistoryClientProps {
-  user: User;
+  user: { id: string; email: string; name: string | null };
   profile: any;
   jobs: any[];
 }
@@ -21,27 +20,32 @@ export function HistoryClient({ user, profile, jobs }: HistoryClientProps) {
   const filteredJobs = jobs.filter(job => {
     const matchesFilter = filter === 'all' || job.status === filter;
     const matchesSearch = searchTerm === '' ||
-      job.input_filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.output_filename?.toLowerCase().includes(searchTerm.toLowerCase());
+      job.inputFilename.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.outputFilename?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
   const handleDownload = async (jobId: string) => {
-    // TODO: Implement download functionality in Phase 2
-    console.log('Downloading job:', jobId);
+    try {
+      const response = await fetch(`/api/jobs/${jobId}/download`);
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'presentation.pptx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download error:', err);
+    }
   };
 
   const navItems = [
-    {
-      href: '/dashboard',
-      label: 'Dashboard',
-      icon: Home,
-    },
-    {
-      href: '/history',
-      label: 'History',
-      icon: History,
-    },
+    { href: '/dashboard', label: 'Dashboard', icon: Home },
+    { href: '/history', label: 'History', icon: History },
   ];
 
   const getStatusCount = (status: string) => {
@@ -58,15 +62,13 @@ export function HistoryClient({ user, profile, jobs }: HistoryClientProps) {
           <p className="text-sm text-white/80 font-medium truncate">
             {profile?.full_name || user.email}
           </p>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors w-full"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </button>
-          </form>
+          <button
+            onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+            className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors w-full"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
         </div>
       }
     >
@@ -81,7 +83,6 @@ export function HistoryClient({ user, profile, jobs }: HistoryClientProps) {
 
         {/* Search and Filter */}
         <div className="flex flex-col sm:flex-row gap-4">
-          {/* Search */}
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
@@ -93,36 +94,19 @@ export function HistoryClient({ user, profile, jobs }: HistoryClientProps) {
             />
           </div>
 
-          {/* Filter */}
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-slate-400" />
             <div className="flex gap-2">
-              <Badge
-                variant={filter === 'all' ? 'default' : 'default'}
-                className="cursor-pointer"
-                onClick={() => setFilter('all')}
-              >
+              <Badge variant={filter === 'all' ? 'default' : 'default'} className="cursor-pointer" onClick={() => setFilter('all')}>
                 All ({jobs.length})
               </Badge>
-              <Badge
-                variant={filter === 'complete' ? 'success' : 'default'}
-                className="cursor-pointer"
-                onClick={() => setFilter('complete')}
-              >
+              <Badge variant={filter === 'complete' ? 'success' : 'default'} className="cursor-pointer" onClick={() => setFilter('complete')}>
                 Complete ({getStatusCount('complete')})
               </Badge>
-              <Badge
-                variant={filter === 'processing' ? 'warning' : 'default'}
-                className="cursor-pointer"
-                onClick={() => setFilter('processing')}
-              >
+              <Badge variant={filter === 'processing' ? 'warning' : 'default'} className="cursor-pointer" onClick={() => setFilter('processing')}>
                 Processing ({getStatusCount('processing')})
               </Badge>
-              <Badge
-                variant={filter === 'failed' ? 'error' : 'default'}
-                className="cursor-pointer"
-                onClick={() => setFilter('failed')}
-              >
+              <Badge variant={filter === 'failed' ? 'error' : 'default'} className="cursor-pointer" onClick={() => setFilter('failed')}>
                 Failed ({getStatusCount('failed')})
               </Badge>
             </div>

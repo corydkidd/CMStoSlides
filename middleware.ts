@@ -1,86 +1,38 @@
-import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({
-            request,
-          });
-          cookiesToSet.forEach(({ name, value, options }) => {
-            // Override cookie options to work with IP addresses in development
-            const cookieOptions = {
-              ...options,
-              sameSite: 'lax' as const,
-              secure: false,
-              httpOnly: true,
-              path: '/',
-            };
-            supabaseResponse.cookies.set(name, value, cookieOptions);
-          });
-        },
-      },
-    }
-  );
-
-  // Refresh session if expired
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Protect routes
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/login');
+  const isAuthRoute = request.nextUrl.pathname.startsWith('/auth/');
+  const isApiAuthRoute = request.nextUrl.pathname.startsWith('/api/auth/');
   const isAdminRoute = request.nextUrl.pathname.startsWith('/admin');
-  const isDashboardRoute = request.nextUrl.pathname.startsWith('/dashboard') ||
-                           request.nextUrl.pathname.startsWith('/history');
+  const isProtectedRoute =
+    request.nextUrl.pathname.startsWith('/dashboard') ||
+    request.nextUrl.pathname.startsWith('/history') ||
+    request.nextUrl.pathname.startsWith('/admin');
 
-  // TEMPORARY: Auth disabled for testing
-  // Redirect to login if not authenticated
-  // if (!user && !isAuthRoute && (isDashboardRoute || isAdminRoute)) {
-  //   const url = request.nextUrl.clone();
-  //   url.pathname = '/login';
-  //   url.searchParams.set('redirectedFrom', request.nextUrl.pathname);
-  //   return NextResponse.redirect(url);
-  // }
+  // Allow NextAuth API routes through
+  if (isApiAuthRoute) {
+    return NextResponse.next();
+  }
 
-  // Redirect to dashboard if authenticated and trying to access login
-  // if (user && isAuthRoute) {
-  //   const url = request.nextUrl.clone();
-  //   url.pathname = '/dashboard';
-  //   return NextResponse.redirect(url);
-  // }
+  // Redirect to sign in if not authenticated and trying to access protected routes
+  if (!token && isProtectedRoute) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/auth/signin';
+    url.searchParams.set('callbackUrl', request.nextUrl.pathname);
+    return NextResponse.redirect(url);
+  }
 
-  // TEMPORARY: Admin check disabled for testing
-  // Check admin access for admin routes
-  // if (user && isAdminRoute) {
-  //   const { data: profile } = await supabase
-  //     .from('profiles')
-  //     .select('is_admin')
-  //     .eq('id', user.id)
-  //     .single();
+  // Redirect to dashboard if authenticated and trying to access auth pages
+  if (token && isAuthRoute) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/dashboard';
+    return NextResponse.redirect(url);
+  }
 
-  //   if (!profile?.is_admin) {
-  //     const url = request.nextUrl.clone();
-  //     url.pathname = '/dashboard';
-  //     return NextResponse.redirect(url);
-  //   }
-  // }
-
-  return supabaseResponse;
+  return NextResponse.next();
 }
 
 export const config = {
