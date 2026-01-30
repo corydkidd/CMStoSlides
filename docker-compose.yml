@@ -4,19 +4,44 @@ services:
     container_name: cms-converter
     restart: unless-stopped
     ports:
-      - "3002:3000"  # Using port 3002 (3000 and 3001 already in use)
+      - "3002:3000"
     environment:
       - NODE_ENV=production
-      # Point to host machine's Supabase instance
-      - NEXT_PUBLIC_SUPABASE_URL=http://192.168.4.145:54321
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DATABASE_URL=postgresql://cms_converter:${DB_PASSWORD}@db:5432/cms_converter
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - AUTHENTIK_CLIENT_ID=${AUTHENTIK_CLIENT_ID}
+      - AUTHENTIK_CLIENT_SECRET=${AUTHENTIK_CLIENT_SECRET}
+      - AUTHENTIK_ISSUER=${AUTHENTIK_ISSUER}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - CRON_SECRET=${CRON_SECRET}
+      - UPLOAD_DIR=/app/data
+    volumes:
+      - /mnt/storage/projects/CMStoSlides/uploads:/app/data/uploads
+      - /mnt/storage/projects/CMStoSlides/outputs:/app/data/outputs
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - web
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+
+  db:
+    image: postgres:16-alpine
+    container_name: cms-converter-db-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cms_converter
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: cms_converter
+    volumes:
+      - /mnt/storage/projects/CMStoSlides/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cms_converter"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - web
 
 networks:
   web:
