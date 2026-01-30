@@ -1,0 +1,120 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  profileImage  String?
+  authentikId   String    @unique
+  isAdmin       Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  templatePath  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  descriptionDocs     DescriptionDocument[] @relation("UserDocs")
+  createdDocs         DescriptionDocument[] @relation("CreatedByDocs")
+  conversionJobs      ConversionJob[]
+  federalRegisterDocs FederalRegisterDocument[]
+}
+
+model DescriptionDocument {
+  id        String   @id @default(cuid())
+  userId    String
+  content   String
+  version   Int      @default(1)
+  isCurrent Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdById String?
+
+  user      User     @relation("UserDocs", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy User?    @relation("CreatedByDocs", fields: [createdById], references: [id])
+  jobs      ConversionJob[]
+
+  @@index([userId, isCurrent])
+}
+
+model ConversionJob {
+  id                    String    @id @default(cuid())
+  userId                String
+  status                String    @default("pending")
+  inputFilename         String
+  inputPath             String
+  inputSizeBytes        BigInt?
+  extractedText         String?
+  descriptionDocId      String?
+  processingStartedAt   DateTime?
+  processingCompletedAt DateTime?
+  outputFilename        String?
+  outputPath            String?
+  outputSizeBytes       BigInt?
+  errorMessage          String?
+  metadata              Json?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  descriptionDoc DescriptionDocument? @relation(fields: [descriptionDocId], references: [id])
+  federalRegisterDoc FederalRegisterDocument?
+
+  @@index([userId, status])
+  @@index([status])
+}
+
+model FederalRegisterDocument {
+  id               String    @id @default(cuid())
+  documentNumber   String    @unique
+  citation         String?
+  title            String
+  documentType     String?
+  abstract         String?
+  publicationDate  DateTime
+  pdfUrl           String
+  htmlUrl          String?
+  isSignificant    Boolean   @default(false)
+  agencies         Json?
+  autoProcess      Boolean   @default(true)
+  targetUserId     String?
+  conversionJobId  String?   @unique
+  detectedAt       DateTime  @default(now())
+  pdfDownloadedAt  DateTime?
+  processingStatus String    @default("pending")
+  errorMessage     String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  targetUser    User?          @relation(fields: [targetUserId], references: [id])
+  conversionJob ConversionJob? @relation(fields: [conversionJobId], references: [id])
+
+  @@index([documentNumber])
+  @@index([publicationDate(sort: Desc)])
+  @@index([processingStatus])
+  @@index([targetUserId])
+}
+
+model FederalRegisterSettings {
+  id                     String    @id @default(cuid())
+  isEnabled              Boolean   @default(true)
+  pollIntervalMinutes    Int       @default(15)
+  agencySlugs            String[]  @default(["centers-for-medicare-medicaid-services"])
+  documentTypes          String[]  @default(["RULE", "PRORULE", "NOTICE"])
+  onlySignificant        Boolean   @default(false)
+  defaultTargetUserId    String?
+  autoProcessNew         Boolean   @default(true)
+  lastPollAt             DateTime?
+  lastPollStatus         String?
+  lastPollDocumentsFound Int?
+  initialized            Boolean   @default(false)
+  initialDocumentCount   Int       @default(5)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
