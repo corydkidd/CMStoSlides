@@ -5,7 +5,7 @@ export const authOptions: NextAuthOptions = {
   providers: [
     {
       id: 'authentik',
-      name: 'Advient Advisors',
+      name: 'Sumis Partners',
       type: 'oauth',
       clientId: process.env.AUTHENTIK_CLIENT_ID!,
       clientSecret: process.env.AUTHENTIK_CLIENT_SECRET!,

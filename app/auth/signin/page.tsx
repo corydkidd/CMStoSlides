@@ -44,7 +44,7 @@ function SignInContent() {
             className="w-full"
             size="lg"
           >
-            <span>Sign in with Advient SSO</span>
+            <span>Sign in with Sumis SSO</span>
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
@@ -53,7 +53,7 @@ function SignInContent() {
         <p className="mt-8 text-center text-sm text-slate-600 dark:text-slate-400">
           Powered by{' '}
           <span className="font-semibold text-cyan-600 dark:text-cyan-400">
-            Advient Advisors
+            Sumis Partners
           </span>
         </p>
       </div>
