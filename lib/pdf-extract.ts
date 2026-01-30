@@ -1,4 +1,4 @@
-import pdf from 'pdf-parse';
+import * as pdf from 'pdf-parse';
 
 interface PDFExtractResult {
   text: string;
