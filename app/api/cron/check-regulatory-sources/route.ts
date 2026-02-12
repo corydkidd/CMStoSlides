@@ -8,6 +8,7 @@
 
 import { prisma } from '@/lib/db';
 import { fetchFederalRegisterDocuments } from '@/lib/federal-register';
+import { fetchRSSFeed, extractPdfUrl, parseRSSDate } from '@/lib/rss-parser';
 
 export async function POST(request: Request) {
   try {
@@ -50,12 +51,14 @@ export async function POST(request: Request) {
         console.log(`[Regulatory Monitor] ${agency.id}: Found ${frDocuments.length} FR documents`);
         stats.documents_detected += frDocuments.length;
 
-        // TODO: Check newsroom feeds (task #2)
-        // const newsroomDocuments = await checkNewsroomFeeds(agency);
-        // stats.documents_detected += newsroomDocuments.length;
+        // Check newsroom RSS feeds
+        const newsroomDocuments = await checkNewsroomFeeds(agency);
+        console.log(`[Regulatory Monitor] ${agency.id}: Found ${newsroomDocuments.length} newsroom documents`);
+        stats.documents_detected += newsroomDocuments.length;
 
         // Route documents to subscribed organizations
-        const orgsNotified = await routeDocumentsToOrganizations(agency, frDocuments);
+        const allDocuments = [...frDocuments, ...newsroomDocuments];
+        const orgsNotified = await routeDocumentsToOrganizations(agency, allDocuments);
         stats.organizations_notified += orgsNotified;
 
       } catch (error: any) {
@@ -137,6 +140,77 @@ async function checkFederalRegister(agency: any): Promise<any[]> {
     console.error(`[FR Check] Error for ${agency.id}:`, error);
     throw error;
   }
+}
+
+/**
+ * Check newsroom RSS feeds for a specific agency
+ */
+async function checkNewsroomFeeds(agency: any): Promise<any[]> {
+  const newDocuments = [];
+
+  if (!agency.newsroomFeeds || !Array.isArray(agency.newsroomFeeds)) {
+    return newDocuments;
+  }
+
+  // Get feeds that are enabled
+  const feeds = agency.newsroomFeeds.filter((feed: any) => feed.enabled && feed.type === 'rss');
+
+  for (const feed of feeds) {
+    try {
+      console.log(`[RSS Check] Fetching ${feed.name} for ${agency.id}`);
+
+      const rssFeed = await fetchRSSFeed(feed.url);
+      const items = rssFeed.items.slice(0, 20); // Limit to 20 most recent
+
+      for (const item of items) {
+        // Use guid or link as unique identifier
+        const externalId = item.guid || item.link;
+
+        // Check if we already have this document
+        const existing = await prisma.regulatoryDocument.findUnique({
+          where: {
+            source_externalId: {
+              source: 'newsroom_rss',
+              externalId,
+            },
+          },
+        });
+
+        if (existing) {
+          continue; // Skip existing
+        }
+
+        // Parse publication date
+        const pubDate = parseRSSDate(item.pubDate);
+
+        // Try to extract PDF URL
+        const pdfUrl = extractPdfUrl(item);
+
+        // Create new regulatory document
+        const newDoc = await prisma.regulatoryDocument.create({
+          data: {
+            source: 'newsroom_rss',
+            agencyId: agency.id,
+            externalId,
+            title: item.title,
+            abstract: item.description,
+            publicationDate: pubDate,
+            sourceUrl: item.link,
+            pdfUrl,
+            feedName: feed.name,
+            detectedAt: new Date(),
+          },
+        });
+
+        console.log(`[RSS Check] New item: ${item.title.substring(0, 60)}...`);
+        newDocuments.push(newDoc);
+      }
+    } catch (error: any) {
+      console.error(`[RSS Check] Error fetching ${feed.name}:`, error);
+    }
+  }
+
+  return newDocuments;
 }
 
 /**
