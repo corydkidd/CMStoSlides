@@ -71,11 +71,19 @@ export function DashboardClient({ user, profile, initialJobs }: DashboardClientP
       }
 
       // The response IS the file now (served directly)
+      // Extract filename from Content-Disposition header
+      const disposition = response.headers.get('Content-Disposition');
+      let filename = 'presentation.pptx';
+      if (disposition) {
+        const match = disposition.match(/filename="?([^";\n]+)"?/);
+        if (match?.[1]) filename = match[1];
+      }
+
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'presentation.pptx';
+      a.download = filename;
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();

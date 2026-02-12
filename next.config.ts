@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  experimental: {
+    instrumentationHook: true,
+  },
   typescript: {
     // WARNING: This allows production builds to complete even with type errors
     // TODO: Fix all TypeScript errors and remove this

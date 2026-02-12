@@ -1,6 +1,6 @@
 'use client';
 
-import { FileText, Download, CheckCircle, Clock, AlertCircle, Loader2 } from 'lucide-react';
+import { FileText, Download, CheckCircle, Clock, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';
@@ -8,11 +8,17 @@ import { cn } from '@/lib/utils';
 interface Job {
   id: string;
   status: 'pending' | 'processing' | 'complete' | 'failed';
-  input_filename: string;
-  output_filename?: string | null;
-  created_at: string;
-  processing_completed_at?: string | null;
-  error_message?: string | null;
+  inputFilename: string;
+  outputFilename?: string | null;
+  createdAt: string;
+  processingCompletedAt?: string | null;
+  errorMessage?: string | null;
+  // Federal Register metadata
+  documentTitle?: string | null;
+  documentUrl?: string | null;
+  citation?: string | null;
+  documentNumber?: string | null;
+  publicationDate?: string | null;
 }
 
 interface JobCardProps {
@@ -60,6 +66,7 @@ export function JobCard({ job, onDownload }: JobCardProps) {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
@@ -77,6 +84,9 @@ export function JobCard({ job, onDownload }: JobCardProps) {
       year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
     });
   };
+
+  // Display title: prefer FR document title, fall back to filename
+  const displayTitle = job.documentTitle || job.inputFilename;
 
   return (
     <div className={cn(
@@ -96,26 +106,51 @@ export function JobCard({ job, onDownload }: JobCardProps) {
           </div>
 
           <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-slate-900 dark:text-white truncate mb-1">
-              {job.input_filename}
+            <h3 className="font-medium text-slate-900 dark:text-white mb-1 leading-snug">
+              {job.documentUrl ? (
+                <a
+                  href={job.documentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors inline-flex items-start gap-1.5"
+                >
+                  <span className="line-clamp-2">{displayTitle}</span>
+                  <ExternalLink className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 opacity-50" />
+                </a>
+              ) : (
+                <span className="line-clamp-2">{displayTitle}</span>
+              )}
             </h3>
 
-            {job.status === 'complete' && job.output_filename && (
-              <p className="text-sm text-slate-600 dark:text-slate-400 truncate mb-2">
-                Generated: {job.output_filename}
+            {/* Citation & document number */}
+            {(job.citation || job.documentNumber) && (
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">
+                {job.citation || job.documentNumber}
+                {job.inputFilename && (
+                  <span className="ml-2 text-xs opacity-60">({job.inputFilename})</span>
+                )}
               </p>
             )}
 
-            {job.status === 'failed' && job.error_message && (
-              <p className="text-sm text-red-600 dark:text-red-400 mb-2">
-                {job.error_message}
+            {job.status === 'complete' && job.outputFilename && (
+              <p className="text-sm text-green-600 dark:text-green-400 truncate mb-1">
+                ✓ {job.outputFilename}
+              </p>
+            )}
+
+            {job.status === 'failed' && job.errorMessage && (
+              <p className="text-sm text-red-600 dark:text-red-400 mb-1">
+                {job.errorMessage}
               </p>
             )}
 
             <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-              <span>{formatDate(job.created_at)}</span>
-              {job.processing_completed_at && (
-                <span>• Completed {formatDate(job.processing_completed_at)}</span>
+              {job.createdAt && <span>{formatDate(job.createdAt)}</span>}
+              {job.publicationDate && (
+                <span>• Published {new Date(job.publicationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              )}
+              {job.processingCompletedAt && (
+                <span>• Completed {formatDate(job.processingCompletedAt)}</span>
               )}
             </div>
           </div>

@@ -27,12 +27,43 @@ export async function GET(request: Request) {
     take: limit,
   });
 
-  // Serialize BigInt
-  const serializedJobs = jobs.map((j) => ({
-    ...j,
-    inputSizeBytes: j.inputSizeBytes ? Number(j.inputSizeBytes) : null,
-    outputSizeBytes: j.outputSizeBytes ? Number(j.outputSizeBytes) : null,
-  }));
+  // Look up linked Federal Register documents for titles/URLs
+  const jobIds = jobs.map((j) => j.id);
+  const frDocs = await prisma.federalRegisterDocument.findMany({
+    where: { conversionJobId: { in: jobIds } },
+    select: {
+      conversionJobId: true,
+      title: true,
+      htmlUrl: true,
+      citation: true,
+      documentNumber: true,
+      publicationDate: true,
+    },
+  });
+  const frDocByJobId = new Map(frDocs.map((d) => [d.conversionJobId, d]));
+
+  // Serialize BigInt and attach FR metadata
+  const serializedJobs = jobs.map((j) => {
+    const frDoc = frDocByJobId.get(j.id);
+    return {
+      ...j,
+      inputSizeBytes: j.inputSizeBytes ? Number(j.inputSizeBytes) : null,
+      outputSizeBytes: j.outputSizeBytes ? Number(j.outputSizeBytes) : null,
+      // Federal Register metadata
+      documentTitle: frDoc?.title || null,
+      documentUrl: frDoc?.htmlUrl || null,
+      citation: frDoc?.citation || null,
+      documentNumber: frDoc?.documentNumber || null,
+      publicationDate: frDoc?.publicationDate || null,
+    };
+  });
+
+  // Sort by publication date (newest first), falling back to createdAt
+  serializedJobs.sort((a, b) => {
+    const dateA = a.publicationDate ? new Date(a.publicationDate).getTime() : new Date(a.createdAt).getTime();
+    const dateB = b.publicationDate ? new Date(b.publicationDate).getTime() : new Date(b.createdAt).getTime();
+    return dateB - dateA;
+  });
 
   return NextResponse.json({ jobs: serializedJobs });
 }

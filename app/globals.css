@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ============================================
    ADVIENT DESIGN SYSTEM v2.0
    ============================================ */

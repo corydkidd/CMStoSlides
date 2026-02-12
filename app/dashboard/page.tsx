@@ -24,15 +24,45 @@ export default async function DashboardPage() {
   const jobs = await prisma.conversionJob.findMany({
     where: { userId: dbUser.id },
     orderBy: { createdAt: 'desc' },
-    take: 5,
+    take: 20,
   });
 
-  // Serialize BigInt fields for client component
-  const serializedJobs = jobs.map((j) => ({
-    ...j,
-    inputSizeBytes: j.inputSizeBytes ? Number(j.inputSizeBytes) : null,
-    outputSizeBytes: j.outputSizeBytes ? Number(j.outputSizeBytes) : null,
-  }));
+  // Look up linked Federal Register documents for titles/URLs
+  const jobIds = jobs.map((j) => j.id);
+  const frDocs = await prisma.federalRegisterDocument.findMany({
+    where: { conversionJobId: { in: jobIds } },
+    select: {
+      conversionJobId: true,
+      title: true,
+      htmlUrl: true,
+      citation: true,
+      documentNumber: true,
+      publicationDate: true,
+    },
+  });
+  const frDocByJobId = new Map(frDocs.map((d) => [d.conversionJobId, d]));
+
+  // Serialize BigInt fields and attach FR metadata for client component
+  const serializedJobs = jobs.map((j) => {
+    const frDoc = frDocByJobId.get(j.id);
+    return {
+      ...j,
+      inputSizeBytes: j.inputSizeBytes ? Number(j.inputSizeBytes) : null,
+      outputSizeBytes: j.outputSizeBytes ? Number(j.outputSizeBytes) : null,
+      documentTitle: frDoc?.title || null,
+      documentUrl: frDoc?.htmlUrl || null,
+      citation: frDoc?.citation || null,
+      documentNumber: frDoc?.documentNumber || null,
+      publicationDate: frDoc?.publicationDate || null,
+    };
+  });
+
+  // Sort by publication date (newest first), falling back to createdAt
+  serializedJobs.sort((a, b) => {
+    const dateA = a.publicationDate ? new Date(a.publicationDate).getTime() : new Date(a.createdAt).getTime();
+    const dateB = b.publicationDate ? new Date(b.publicationDate).getTime() : new Date(b.createdAt).getTime();
+    return dateB - dateA;
+  });
 
   return (
     <DashboardClient
