@@ -39,13 +39,45 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
       }
+
+      // Fetch organization data on each token refresh
+      if (token.authentikId) {
+        const dbUser = await prisma.user.findUnique({
+          where: { authentikId: token.authentikId as string },
+          include: {
+            organization: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                outputType: true,
+                hasClients: true,
+                branding: true,
+              },
+            },
+          },
+        });
+
+        if (dbUser) {
+          token.userId = dbUser.id;
+          token.isAdmin = dbUser.isAdmin;
+          token.organizationId = dbUser.organizationId;
+          token.role = dbUser.role;
+          token.organization = dbUser.organization;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id || token.sub;
+        (session.user as any).id = token.userId || token.id || token.sub;
         (session.user as any).groups = token.groups || [];
         (session.user as any).authentikId = token.authentikId || token.sub;
+        (session.user as any).isAdmin = token.isAdmin || false;
+        (session.user as any).organizationId = token.organizationId;
+        (session.user as any).role = token.role || 'member';
+        (session.user as any).organization = token.organization;
       }
       return session;
     },
