@@ -94,8 +94,7 @@ export function DocumentsPageClient({
         throw new Error(data.error || 'Failed to generate base output');
       }
 
-      // Show success message and reload to get updated status
-      alert('Base output generation started. This may take a few minutes.');
+      // Reload to get updated status (button already shows processing state)
       window.location.reload();
     } catch (error: any) {
       console.error('Error generating base output:', error);
