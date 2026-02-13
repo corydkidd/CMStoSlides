@@ -129,11 +129,78 @@ function SectionComponent({ section, styles }: any) {
 }
 
 /**
+ * Parse inline Markdown into text segments with formatting
+ */
+function parseInlineMarkdown(text: string): Array<{ text: string; bold?: boolean; italic?: boolean }> {
+  const segments: Array<{ text: string; bold?: boolean; italic?: boolean }> = [];
+  let currentPos = 0;
+
+  // Pattern to match **bold**, *italic*, or `code`
+  const pattern = /(\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`)/g;
+  let match;
+
+  while ((match = pattern.exec(text)) !== null) {
+    // Add plain text before the match
+    if (match.index > currentPos) {
+      segments.push({ text: text.substring(currentPos, match.index) });
+    }
+
+    // Add formatted text
+    if (match[2]) {
+      // **bold**
+      segments.push({ text: match[2], bold: true });
+    } else if (match[3]) {
+      // *italic*
+      segments.push({ text: match[3], italic: true });
+    } else if (match[4]) {
+      // `code` - treat as plain for now
+      segments.push({ text: match[4] });
+    }
+
+    currentPos = match.index + match[0].length;
+  }
+
+  // Add remaining plain text
+  if (currentPos < text.length) {
+    segments.push({ text: text.substring(currentPos) });
+  }
+
+  return segments.length > 0 ? segments : [{ text }];
+}
+
+/**
+ * Render formatted text from inline Markdown segments
+ */
+function FormattedText({ text, style }: { text: string; style: any }) {
+  const segments = parseInlineMarkdown(text);
+
+  if (segments.length === 1 && !segments[0].bold && !segments[0].italic) {
+    // Plain text, render directly
+    return React.createElement(Text, { style }, segments[0].text);
+  }
+
+  // Multiple segments with formatting
+  return React.createElement(
+    Text,
+    { style },
+    ...segments.map((segment, idx) => {
+      if (segment.bold) {
+        return React.createElement(Text, { key: idx, style: { fontFamily: 'Helvetica-Bold' } }, segment.text);
+      }
+      if (segment.italic) {
+        return React.createElement(Text, { key: idx, style: { fontFamily: 'Helvetica-Oblique' } }, segment.text);
+      }
+      return React.createElement(Text, { key: idx }, segment.text);
+    })
+  );
+}
+
+/**
  * Content block - renders paragraphs, bullets, etc.
  */
 function ContentBlock({ block, styles }: any) {
   if (block.type === 'paragraph') {
-    return React.createElement(Text, { style: styles.paragraph }, block.text);
+    return React.createElement(FormattedText, { text: block.text, style: styles.paragraph });
   }
 
   if (block.type === 'bullet') {
@@ -141,12 +208,12 @@ function ContentBlock({ block, styles }: any) {
       View,
       { style: styles.bulletContainer },
       React.createElement(Text, { style: styles.bullet }, '•'),
-      React.createElement(Text, { style: styles.bulletText }, block.text)
+      React.createElement(FormattedText, { text: block.text, style: styles.bulletText })
     );
   }
 
   if (block.type === 'strong') {
-    return React.createElement(Text, { style: styles.strong }, block.text);
+    return React.createElement(Text, { style: { ...styles.paragraph, fontFamily: 'Helvetica-Bold' } }, block.text);
   }
 
   return null;
@@ -186,11 +253,10 @@ function parseMarkdownSections(markdown: string): any[] {
     // Bullet points (- item or * item)
     if (line.match(/^[-*]\s+/)) {
       const text = line.replace(/^[-*]\s+/, '');
-      // Remove markdown bold markers for simplicity
-      const cleanText = text.replace(/\*\*(.*?)\*\*/g, '$1');
+      // Keep markdown formatting - it will be parsed during rendering
       currentSection.content.push({
         type: 'bullet',
-        text: cleanText,
+        text: text,
       });
       continue;
     }
@@ -205,15 +271,10 @@ function parseMarkdownSections(markdown: string): any[] {
     }
 
     // Regular paragraph
-    // Clean up markdown formatting
-    const cleanText = line
-      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
-      .replace(/\*(.*?)\*/g, '$1') // Remove italic
-      .replace(/`(.*?)`/g, '$1'); // Remove code
-
+    // Keep markdown formatting - it will be parsed during rendering
     currentSection.content.push({
       type: 'paragraph',
-      text: cleanText,
+      text: line,
     });
   }
 
