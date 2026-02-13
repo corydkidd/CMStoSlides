@@ -132,11 +132,11 @@ model FederalRegisterSettings {
 model Agency {
   id                   String   @id // 'cms', 'fda', etc.
   name                 String
-  federalRegisterSlug  String   @map("federal_register_slug")
-  newsroomFeeds        Json     @default("[]") @map("newsroom_feeds") // Array of {url, name, type, enabled}
-  documentTypes        String[] @default(["RULE", "PRORULE", "NOTICE"]) @map("document_types")
-  isActive             Boolean  @default(true) @map("is_active")
-  createdAt            DateTime @default(now()) @map("created_at")
+  federalRegisterSlug  String
+  newsroomFeeds        Json     @default("[]") // Array of {url, name, type, enabled}
+  documentTypes        String[] @default(["RULE", "PRORULE", "NOTICE"])
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
 
   organizationAgencies OrganizationAgency[]
   regulatoryDocuments  RegulatoryDocument[]
@@ -147,13 +147,13 @@ model Organization {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
   slug        String   @unique
-  outputType  String   @default("pptx") @map("output_type") // 'pptx' | 'memo_pdf'
+  outputType  String   @default("pptx") // 'pptx' | 'memo_pdf'
   branding    Json     @default("{}")
-  modelConfig Json     @default("{\"base_model\": \"claude-sonnet-4-5-20250929\", \"customization_model\": \"claude-haiku-4-5-20251001\"}") @map("model_config")
-  hasClients  Boolean  @default(false) @map("has_clients")
-  autoProcess Boolean  @default(false) @map("auto_process")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  modelConfig Json     @default("{\"base_model\": \"claude-sonnet-4-5-20250929\", \"customization_model\": \"claude-haiku-4-5-20251001\"}")
+  hasClients  Boolean  @default(false)
+  autoProcess Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   users                User[]
   clients              Client[]
@@ -163,11 +163,11 @@ model Organization {
 }
 
 model OrganizationAgency {
-  organizationId          String   @db.Uuid @map("organization_id")
-  agencyId                String   @map("agency_id")
-  federalRegisterEnabled  Boolean  @default(true) @map("federal_register_enabled")
-  newsroomEnabled         Boolean  @default(true) @map("newsroom_enabled")
-  documentTypes           String[] @map("document_types")
+  organizationId          String   @db.Uuid
+  agencyId                String
+  federalRegisterEnabled  Boolean  @default(true)
+  newsroomEnabled         Boolean  @default(true)
+  documentTypes           String[]
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   agency       Agency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
@@ -178,14 +178,14 @@ model OrganizationAgency {
 
 model Client {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId String   @db.Uuid @map("organization_id")
+  organizationId String   @db.Uuid
   name           String
   context        String   // Paragraph describing the client
   industry       String?
-  focusAreas     String[] @map("focus_areas")
-  isActive       Boolean  @default(true) @map("is_active")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  focusAreas     String[]
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   clientOutputs ClientOutput[]
@@ -197,20 +197,20 @@ model Client {
 model RegulatoryDocument {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   source          String    // 'federal_register' | 'newsroom_rss'
-  agencyId        String    @map("agency_id")
-  externalId      String    @map("external_id") // document_number for FR, guid for RSS
+  agencyId        String
+  externalId      String    // document_number for FR, guid for RSS
   title           String
   abstract        String?
-  publicationDate DateTime? @db.Date @map("publication_date")
-  sourceUrl       String?   @map("source_url")
-  pdfUrl          String?   @map("pdf_url")
+  publicationDate DateTime? @db.Date
+  sourceUrl       String?
+  pdfUrl          String?
   citation        String?
-  documentType    String?   @map("document_type")
-  isSignificant   Boolean?  @map("is_significant")
-  feedName        String?   @map("feed_name")
-  detectedAt      DateTime  @default(now()) @map("detected_at")
-  contentHash     String?   @map("content_hash")
-  createdAt       DateTime  @default(now()) @map("created_at")
+  documentType    String?
+  isSignificant   Boolean?
+  feedName        String?
+  detectedAt      DateTime  @default(now())
+  contentHash     String?
+  createdAt       DateTime  @default(now())
 
   agency          Agency           @relation(fields: [agencyId], references: [id])
   documentOutputs DocumentOutput[]
@@ -224,19 +224,19 @@ model RegulatoryDocument {
 
 model DocumentOutput {
   id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  regulatoryDocumentId   String    @db.Uuid @map("regulatory_document_id")
-  organizationId         String    @db.Uuid @map("organization_id")
-  outputType             String    @map("output_type") // 'pptx' | 'memo_pdf'
-  outputPath             String?   @map("output_path")
+  regulatoryDocumentId   String    @db.Uuid
+  organizationId         String    @db.Uuid
+  outputType             String    // 'pptx' | 'memo_pdf'
+  outputPath             String?
   status                 String    @default("pending") // pending, processing, complete, failed
-  errorMessage           String?   @map("error_message")
-  isBaseOutput           Boolean   @default(true) @map("is_base_output")
-  modelUsed              String?   @map("model_used")
-  tokensInput            Int?      @map("tokens_input")
-  tokensOutput           Int?      @map("tokens_output")
-  processingStartedAt    DateTime? @map("processing_started_at")
-  processingCompletedAt  DateTime? @map("processing_completed_at")
-  createdAt              DateTime  @default(now()) @map("created_at")
+  errorMessage           String?
+  isBaseOutput           Boolean   @default(true)
+  modelUsed              String?
+  tokensInput            Int?
+  tokensOutput           Int?
+  processingStartedAt    DateTime?
+  processingCompletedAt  DateTime?
+  createdAt              DateTime  @default(now())
 
   regulatoryDocument RegulatoryDocument @relation(fields: [regulatoryDocumentId], references: [id])
   organization       Organization       @relation(fields: [organizationId], references: [id])
@@ -250,20 +250,20 @@ model DocumentOutput {
 
 model ClientOutput {
   id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  documentOutputId       String    @db.Uuid @map("document_output_id")
-  clientId               String    @db.Uuid @map("client_id")
-  outputPath             String?   @map("output_path")
+  documentOutputId       String    @db.Uuid
+  clientId               String    @db.Uuid
+  outputPath             String?
   status                 String    @default("pending") // pending, selected, processing, complete, failed, skipped
-  errorMessage           String?   @map("error_message")
-  selectedForGeneration  Boolean   @default(false) @map("selected_for_generation")
-  selectedBy             String?   @map("selected_by")
-  selectedAt             DateTime? @map("selected_at")
-  modelUsed              String?   @map("model_used")
-  tokensInput            Int?      @map("tokens_input")
-  tokensOutput           Int?      @map("tokens_output")
-  processingStartedAt    DateTime? @map("processing_started_at")
-  processingCompletedAt  DateTime? @map("processing_completed_at")
-  createdAt              DateTime  @default(now()) @map("created_at")
+  errorMessage           String?
+  selectedForGeneration  Boolean   @default(false)
+  selectedBy             String?
+  selectedAt             DateTime?
+  modelUsed              String?
+  tokensInput            Int?
+  tokensOutput           Int?
+  processingStartedAt    DateTime?
+  processingCompletedAt  DateTime?
+  createdAt              DateTime  @default(now())
 
   documentOutput DocumentOutput @relation(fields: [documentOutputId], references: [id], onDelete: Cascade)
   client         Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)

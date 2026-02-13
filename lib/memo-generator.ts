@@ -153,10 +153,11 @@ Thought-provoking questions for leadership discussion:
 
 Important:
 - Use clear headings (##) for each section
-- Use bullet points for readability
-- Bold key terms and dates
+- Use bullet points for readability (NOT tables)
+- Bold key terms and dates with **text**
 - Keep language professional but accessible
-- Focus on "so what" not just "what"`;
+- Focus on "so what" not just "what"
+- DO NOT use Markdown tables - use bullet points or simple lists instead`;
 
   console.log(`[Memo Gen] Calling Claude ${model}...`);
 
@@ -273,7 +274,11 @@ Maintain all structure, headings, and factual accuracy from the original.`;
 /**
  * Download PDF from URL (handles both Federal Register and other sources)
  */
-async function downloadPDF(url: string): Promise<Buffer> {
+async function downloadPDF(url: string | null): Promise<Buffer> {
+  if (!url) {
+    throw new Error('PDF URL is required but was not provided');
+  }
+
   // Check if it's a Federal Register PDF (use specialized downloader)
   if (url.includes('federalregister.gov')) {
     const arrayBuffer = await downloadFederalRegisterPDF(url);
@@ -290,22 +295,3 @@ async function downloadPDF(url: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer);
 }
 
-/**
- * Estimate cost for memo generation
- */
-export function estimateMemoGenerationCost(
-  clientCount: number = 0
-): { baseCost: number; clientCost: number; total: number } {
-  // Rough estimates based on typical usage
-  // Base memo (Opus): ~50K input, ~1.5K output = ~$0.22
-  const baseCost = 0.22;
-
-  // Client customization (Haiku): ~4K input (memo), ~1.5K output = ~$0.02
-  const clientCost = clientCount * 0.02;
-
-  return {
-    baseCost,
-    clientCost,
-    total: baseCost + clientCost,
-  };
-}

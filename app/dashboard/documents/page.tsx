@@ -29,51 +29,121 @@ export default async function DocumentsPage() {
     },
   });
 
-  if (!dbUser || !dbUser.organization) {
+  if (!dbUser) {
     redirect('/dashboard');
   }
 
-  // Get agency IDs this org is subscribed to
-  const agencyIds = dbUser.organization.organizationAgencies.map(oa => oa.agencyId);
+  // Admin view: show all documents from all organizations
+  const isAdmin = dbUser.isAdmin;
 
-  // Fetch recent regulatory documents
-  const documents = await prisma.regulatoryDocument.findMany({
-    where: {
-      agencyId: { in: agencyIds },
-    },
-    include: {
-      agency: true,
-      documentOutputs: {
-        where: {
-          organizationId: dbUser.organizationId!,
+  let documents;
+  let organizations;
+
+  if (isAdmin) {
+    // Fetch all organizations for admin
+    organizations = await prisma.organization.findMany({
+      include: {
+        organizationAgencies: {
+          include: {
+            agency: true,
+          },
         },
-        include: {
-          clientOutputs: {
-            where: {
-              selectedForGeneration: true,
+      },
+    });
+
+    // Fetch all documents with outputs from all organizations
+    documents = await prisma.regulatoryDocument.findMany({
+      include: {
+        agency: true,
+        documentOutputs: {
+          include: {
+            organization: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                outputType: true,
+              },
             },
-            include: {
-              client: {
-                select: {
-                  id: true,
-                  name: true,
+            clientOutputs: {
+              where: {
+                selectedForGeneration: true,
+              },
+              include: {
+                client: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
                 },
               },
             },
           },
         },
       },
-    },
-    orderBy: {
-      publicationDate: 'desc',
-    },
-    take: 50,
-  });
+      orderBy: {
+        publicationDate: 'desc',
+      },
+      take: 100, // Show more for admin
+    });
+  } else {
+    // Regular user view: show only their org's documents
+    if (!dbUser.organization) {
+      redirect('/dashboard');
+    }
+
+    organizations = [dbUser.organization];
+
+    const agencyIds = dbUser.organization.organizationAgencies.map(oa => oa.agencyId);
+
+    documents = await prisma.regulatoryDocument.findMany({
+      where: {
+        agencyId: { in: agencyIds },
+      },
+      include: {
+        agency: true,
+        documentOutputs: {
+          where: {
+            organizationId: dbUser.organizationId!,
+          },
+          include: {
+            organization: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                outputType: true,
+              },
+            },
+            clientOutputs: {
+              where: {
+                selectedForGeneration: true,
+              },
+              include: {
+                client: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        publicationDate: 'desc',
+      },
+      take: 50,
+    });
+  }
 
   return (
     <DocumentsPageClient
       documents={documents as any}
       organization={dbUser.organization}
+      organizations={organizations as any}
+      isAdmin={isAdmin}
     />
   );
 }

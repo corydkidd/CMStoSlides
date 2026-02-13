@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { estimateMemoGenerationCost } from '@/lib/memo-generator';
+import { estimateMemoGenerationCost } from '@/lib/memo-cost-utils';
 
 interface Client {
   id: string;

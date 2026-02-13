@@ -13,9 +13,11 @@ import { saveUpload } from '@/lib/storage';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
@@ -42,7 +44,7 @@ export async function POST(
 
     // Get regulatory document
     const document = await prisma.regulatoryDocument.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!document) {

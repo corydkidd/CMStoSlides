@@ -7,7 +7,14 @@ import { DashboardClient } from './DashboardClient';
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
+  console.log('[Dashboard] Session check:', {
+    hasSession: !!session,
+    hasUser: !!session?.user,
+    user: session?.user,
+  });
+
   if (!session?.user) {
+    console.log('[Dashboard] No session, redirecting to signin');
     redirect('/auth/signin');
   }
 

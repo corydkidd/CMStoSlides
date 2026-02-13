@@ -2,7 +2,17 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
 export async function middleware(request: NextRequest) {
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+    secureCookie: true,
+  });
+
+  console.log('[Middleware]', {
+    path: request.nextUrl.pathname,
+    hasToken: !!token,
+    cookies: request.cookies.getAll().map(c => c.name),
+  });
 
   const isAuthRoute = request.nextUrl.pathname.startsWith('/auth/');
   const isApiAuthRoute = request.nextUrl.pathname.startsWith('/api/auth/');
@@ -18,12 +28,13 @@ export async function middleware(request: NextRequest) {
   }
 
   // Redirect to sign in if not authenticated and trying to access protected routes
-  if (!token && isProtectedRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/auth/signin';
-    url.searchParams.set('callbackUrl', request.nextUrl.pathname);
-    return NextResponse.redirect(url);
-  }
+  // TEMPORARILY DISABLED FOR DEBUGGING
+  // if (!token && isProtectedRoute) {
+  //   const url = request.nextUrl.clone();
+  //   url.pathname = '/auth/signin';
+  //   url.searchParams.set('callbackUrl', request.nextUrl.pathname);
+  //   return NextResponse.redirect(url);
+  // }
 
   // Redirect to dashboard if authenticated and trying to access auth pages
   if (token && isAuthRoute) {

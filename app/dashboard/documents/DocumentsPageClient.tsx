@@ -1,12 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import { MainLayout } from '@/components/layout/MainLayout';
 import { DocumentList } from '@/components/documents/DocumentList';
 import { ClientSelector } from '@/components/clients/ClientSelector';
+import { Home, FileText, History } from 'lucide-react';
 
 interface Document {
   id: string;
   source: string;
+  sourceUrl: string | null;
   title: string;
   publicationDate: Date | null;
   agency: {
@@ -18,6 +21,12 @@ interface Document {
     status: string;
     outputType: string;
     outputPath: string | null;
+    organization?: {
+      id: string;
+      name: string;
+      slug: string;
+      outputType: string;
+    };
     clientOutputs: Array<{
       id: string;
       status: string;
@@ -39,12 +48,21 @@ interface Organization {
 
 interface DocumentsPageClientProps {
   documents: Document[];
-  organization: Organization;
+  organization: Organization | null;
+  organizations?: Organization[];
+  isAdmin?: boolean;
 }
 
-export function DocumentsPageClient({ documents, organization }: DocumentsPageClientProps) {
+export function DocumentsPageClient({
+  documents,
+  organization,
+  organizations = [],
+  isAdmin = false
+}: DocumentsPageClientProps) {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
+  const [selectedOrgFilter, setSelectedOrgFilter] = useState<string>('all');
+  const [processingDocuments, setProcessingDocuments] = useState<Set<string>>(new Set());
 
   const handleSelectClients = (document: Document) => {
     setSelectedDocument(document);
@@ -58,10 +76,17 @@ export function DocumentsPageClient({ documents, organization }: DocumentsPageCl
     window.location.reload();
   };
 
-  const handleGenerateBase = async (documentId: string) => {
+  const handleGenerateBase = async (documentId: string, organizationId: string) => {
+    // Add to processing set immediately for UI feedback
+    setProcessingDocuments(prev => new Set(prev).add(documentId));
+
     try {
       const response = await fetch(`/api/documents/${documentId}/generate-base`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ organizationId }),
       });
 
       if (!response.ok) {
@@ -69,42 +94,88 @@ export function DocumentsPageClient({ documents, organization }: DocumentsPageCl
         throw new Error(data.error || 'Failed to generate base output');
       }
 
+      // Show success message and reload to get updated status
       alert('Base output generation started. This may take a few minutes.');
       window.location.reload();
     } catch (error: any) {
       console.error('Error generating base output:', error);
       alert(`Error: ${error.message}`);
+      // Remove from processing set on error
+      setProcessingDocuments(prev => {
+        const next = new Set(prev);
+        next.delete(documentId);
+        return next;
+      });
     }
   };
 
+  // Filter documents by selected organization (admin only)
+  const filteredDocuments = isAdmin && selectedOrgFilter !== 'all'
+    ? documents.filter(d =>
+        d.documentOutputs.some(o => o.organization?.id === selectedOrgFilter)
+      )
+    : documents;
+
+  const navItems = [
+    { href: '/dashboard', label: 'Dashboard', icon: Home },
+    { href: '/dashboard/documents', label: 'Documents', icon: FileText },
+    { href: '/history', label: 'History', icon: History },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <MainLayout productName="Regulatory Intelligence" navItems={navItems}>
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Regulatory Documents</h1>
-          <p className="mt-2 text-gray-600">
-            Monitoring documents from subscribed agencies
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="page-title">Regulatory Documents</h1>
+              <p className="body-text mt-2">
+                {isAdmin ? 'Admin view - All organizations' : 'Monitoring documents from subscribed agencies'}
+              </p>
+            </div>
+
+            {/* Organization Filter (Admin Only) */}
+            {isAdmin && organizations.length > 0 && (
+              <div className="flex items-center gap-2">
+                <label htmlFor="org-filter" className="text-sm font-medium text-gray-700">
+                  Organization:
+                </label>
+                <select
+                  id="org-filter"
+                  value={selectedOrgFilter}
+                  onChange={(e) => setSelectedOrgFilter(e.target.value)}
+                  className="block rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
+                >
+                  <option value="all">All Organizations</option>
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
 
           {/* Stats */}
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="bg-white rounded-lg shadow p-6">
               <div className="text-sm font-medium text-gray-500">Total Documents</div>
               <div className="mt-2 text-3xl font-semibold text-gray-900">
-                {documents.length}
+                {filteredDocuments.length}
               </div>
             </div>
             <div className="bg-white rounded-lg shadow p-6">
               <div className="text-sm font-medium text-gray-500">Processed</div>
               <div className="mt-2 text-3xl font-semibold text-gray-900">
-                {documents.filter(d => d.documentOutputs.some(o => o.status === 'complete')).length}
+                {filteredDocuments.filter(d => d.documentOutputs.some(o => o.status === 'complete')).length}
               </div>
             </div>
             <div className="bg-white rounded-lg shadow p-6">
               <div className="text-sm font-medium text-gray-500">Pending</div>
               <div className="mt-2 text-3xl font-semibold text-gray-900">
-                {documents.filter(d => d.documentOutputs.every(o => o.status === 'pending')).length}
+                {filteredDocuments.filter(d => d.documentOutputs.every(o => o.status === 'pending')).length}
               </div>
             </div>
           </div>
@@ -112,10 +183,12 @@ export function DocumentsPageClient({ documents, organization }: DocumentsPageCl
 
         {/* Document List */}
         <DocumentList
-          documents={documents}
+          documents={filteredDocuments}
           organization={organization}
           onSelectClients={handleSelectClients}
           onGenerateBase={handleGenerateBase}
+          isAdmin={isAdmin}
+          processingDocuments={processingDocuments}
         />
 
         {/* Client Selector Modal */}
@@ -126,6 +199,6 @@ export function DocumentsPageClient({ documents, organization }: DocumentsPageCl
           />
         )}
       </div>
-    </div>
+    </MainLayout>
   );
 }

@@ -1,7 +1,7 @@
 services:
   app:
     build: .
-    container_name: cms-converter
+    container_name: regulatory-intel-app
     restart: unless-stopped
     ports:
       - "3002:3000"
@@ -17,8 +17,8 @@ services:
       - CRON_SECRET=${CRON_SECRET}
       - UPLOAD_DIR=/app/data
     volumes:
-      - /mnt/storage/projects/CMStoSlides/uploads:/app/data/uploads
-      - /mnt/storage/projects/CMStoSlides/outputs:/app/data/outputs
+      - /mnt/storage/projects/regulatory-intel/uploads:/app/data/uploads
+      - /mnt/storage/projects/regulatory-intel/outputs:/app/data/outputs
     depends_on:
       db:
         condition: service_healthy
@@ -27,14 +27,14 @@ services:
 
   db:
     image: postgres:16-alpine
-    container_name: cms-converter-db-local
+    container_name: regulatory-intel-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: cms_converter
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: cms_converter
     volumes:
-      - /mnt/storage/projects/CMStoSlides/postgres:/var/lib/postgresql/data
+      - /mnt/storage/projects/regulatory-intel/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cms_converter"]
       interval: 5s

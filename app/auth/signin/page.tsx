@@ -20,10 +20,10 @@ function SignInContent() {
             <span className="font-display font-bold text-white text-2xl">C</span>
           </div>
           <h1 className="font-display text-3xl font-bold text-slate-900 dark:text-white mb-2">
-            CMS Converter
+            Regulatory Intelligence
           </h1>
           <p className="text-slate-600 dark:text-slate-400">
-            Transform regulatory documents into presentations
+            Monitor and analyze regulatory developments
           </p>
         </div>
 
@@ -44,7 +44,7 @@ function SignInContent() {
             className="w-full"
             size="lg"
           >
-            <span>Sign in with Sumis SSO</span>
+            <span>Sign in with Advient SSO</span>
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
@@ -53,7 +53,7 @@ function SignInContent() {
         <p className="mt-8 text-center text-sm text-slate-600 dark:text-slate-400">
           Powered by{' '}
           <span className="font-semibold text-cyan-600 dark:text-cyan-400">
-            Sumis Partners
+            Advient Advisors
           </span>
         </p>
       </div>

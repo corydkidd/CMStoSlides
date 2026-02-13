@@ -16,8 +16,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "CMS Converter | Advient Advisors",
-  description: "Transform CMS regulatory documents into client-ready PowerPoint presentations",
+  title: "Regulatory Intelligence | Advient Advisors",
+  description: "Monitor and analyze regulatory developments from CMS, FDA, and other agencies",
 };
 
 export default function RootLayout({

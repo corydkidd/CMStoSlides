@@ -115,7 +115,7 @@ export function DashboardClient({ user, profile, initialJobs }: DashboardClientP
 
   return (
     <MainLayout
-      productName="CMS Converter"
+      productName="Regulatory Intelligence"
       navItems={navItems}
       sidebarFooter={
         <div className="space-y-2">

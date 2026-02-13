@@ -227,9 +227,43 @@ function parseMarkdownSections(markdown: string): any[] {
   const lines = markdown.split('\n');
 
   let currentSection: any = null;
+  let inTable = false;
+  let tableRows: string[] = [];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
+
+    // Detect table rows (lines with | characters)
+    const isTableRow = line.includes('|') && line.split('|').length >= 3;
+    const isTableSeparator = line.match(/^\|?[\s:-]+\|/); // |---|---| separator
+
+    if (isTableRow && !isTableSeparator) {
+      if (!inTable) {
+        inTable = true;
+        tableRows = [];
+      }
+      tableRows.push(line);
+      continue;
+    } else if (inTable && !isTableRow && !isTableSeparator) {
+      // End of table - convert to bullet points
+      if (currentSection && tableRows.length > 0) {
+        // Skip header row, convert data rows to bullets
+        for (let j = 1; j < tableRows.length; j++) {
+          const cells = tableRows[j].split('|').map(c => c.trim()).filter(c => c);
+          const text = cells.join(' - ');
+          currentSection.content.push({
+            type: 'bullet',
+            text: text,
+          });
+        }
+      }
+      inTable = false;
+      tableRows = [];
+    }
+
+    if (isTableSeparator) {
+      continue; // Skip separator rows
+    }
 
     // H2 heading (## Title)
     if (line.startsWith('## ')) {
@@ -240,6 +274,8 @@ function parseMarkdownSections(markdown: string): any[] {
         heading: line.replace(/^## /, ''),
         content: [],
       };
+      inTable = false;
+      tableRows = [];
       continue;
     }
 
@@ -253,7 +289,6 @@ function parseMarkdownSections(markdown: string): any[] {
     // Bullet points (- item or * item)
     if (line.match(/^[-*]\s+/)) {
       const text = line.replace(/^[-*]\s+/, '');
-      // Keep markdown formatting - it will be parsed during rendering
       currentSection.content.push({
         type: 'bullet',
         text: text,
@@ -270,12 +305,25 @@ function parseMarkdownSections(markdown: string): any[] {
       continue;
     }
 
-    // Regular paragraph
-    // Keep markdown formatting - it will be parsed during rendering
-    currentSection.content.push({
-      type: 'paragraph',
-      text: line,
-    });
+    // Regular paragraph (skip if in table)
+    if (!inTable && !isTableRow) {
+      currentSection.content.push({
+        type: 'paragraph',
+        text: line,
+      });
+    }
+  }
+
+  // Handle any remaining table rows
+  if (inTable && currentSection && tableRows.length > 0) {
+    for (let j = 1; j < tableRows.length; j++) {
+      const cells = tableRows[j].split('|').map(c => c.trim()).filter(c => c);
+      const text = cells.join(' - ');
+      currentSection.content.push({
+        type: 'bullet',
+        text: text,
+      });
+    }
   }
 
   if (currentSection) {
