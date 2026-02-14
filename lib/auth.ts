@@ -131,22 +131,60 @@ export const authOptions: NextAuthOptions = {
 
         if (!dbUser) {
           console.log('[Auth SignIn] User not found, creating new user');
+
+          // Determine organization based on email domain
+          const emailDomain = user.email.split('@')[1].toLowerCase();
+          let organizationId: string | null = null;
+          let isAdmin = false;
+
+          if (emailDomain === 'catalysthcc.com') {
+            // Nancy and Catalyst team
+            const catalyst = await prisma.organization.findUnique({
+              where: { slug: 'catalyst' },
+            });
+            organizationId = catalyst?.id || null;
+          } else if (emailDomain === 'healthpolicystrategiesllc.com') {
+            // Jayson and Health Policy Strategies team
+            const hps = await prisma.organization.findUnique({
+              where: { slug: 'health-policy-strategies' },
+            });
+            organizationId = hps?.id || null;
+          } else if (emailDomain === 'advientadvisors.com') {
+            // Advient team members are admins
+            isAdmin = true;
+            // Default to Health Policy Strategies for Advient admins, but they can switch
+            const hps = await prisma.organization.findUnique({
+              where: { slug: 'health-policy-strategies' },
+            });
+            organizationId = hps?.id || null;
+          }
+
+          console.log('[Auth SignIn] Assigning organization:', { emailDomain, organizationId, isAdmin });
+
           // Create new user
           dbUser = await prisma.user.create({
             data: {
               email: user.email,
-              name: user.name,
+              name: user.name || user.email.split('@')[0],
               profileImage: user.image,
               authentikId,
+              organizationId,
+              isAdmin,
+              role: isAdmin ? 'admin' : 'user',
             },
           });
-          console.log('[Auth SignIn] Created user:', { id: dbUser.id, email: dbUser.email });
+          console.log('[Auth SignIn] Created user:', {
+            id: dbUser.id,
+            email: dbUser.email,
+            organizationId: dbUser.organizationId,
+            isAdmin: dbUser.isAdmin,
+          });
         } else {
-          // Update existing user
+          // Update existing user's profile info
           await prisma.user.update({
             where: { id: dbUser.id },
             data: {
-              name: user.name,
+              name: user.name || dbUser.name,
               profileImage: user.image,
             },
           });
