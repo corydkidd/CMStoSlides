@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
-import { LayoutDashboard, Users, FileText, LogOut, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, Settings, Eye } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { StatCard } from '@/components/admin/StatCard';
 import { Badge } from '@/components/ui/Badge';
@@ -94,6 +94,27 @@ export function AdminDashboardClient({ user, profile, users, recentJobs }: Admin
                 <Settings className="w-8 h-8 text-cyan-600 dark:text-cyan-400 mb-3" />
                 <h3 className="font-display font-semibold text-slate-900 dark:text-white mb-2">User View</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400">Switch to the regular user dashboard view</p>
+              </div>
+            </Link>
+          </div>
+        </section>
+
+        {/* Preview As Client */}
+        <section>
+          <h2 className="section-header mb-6">Preview Client Views</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link href="/dashboard/documents?preview=catalyst">
+              <div className="p-6 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1A2332] hover:border-amber-400/50 hover:shadow-md transition-all cursor-pointer">
+                <Eye className="w-8 h-8 text-amber-500 mb-3" />
+                <h3 className="font-display font-semibold text-slate-900 dark:text-white mb-1">Catalyst Healthcare Consulting</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">PDF memos · Client workflow enabled</p>
+              </div>
+            </Link>
+            <Link href="/dashboard/documents?preview=health-policy-strategies">
+              <div className="p-6 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1A2332] hover:border-amber-400/50 hover:shadow-md transition-all cursor-pointer">
+                <Eye className="w-8 h-8 text-amber-500 mb-3" />
+                <h3 className="font-display font-semibold text-slate-900 dark:text-white mb-1">Health Policy Strategies</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">PowerPoint output · Auto-process enabled</p>
               </div>
             </Link>
           </div>

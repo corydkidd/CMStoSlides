@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { DocumentList } from '@/components/documents/DocumentList';
 import { ClientSelector } from '@/components/clients/ClientSelector';
-import { Home, FileText, History } from 'lucide-react';
+import { Home, FileText, History, Users, ArrowLeft } from 'lucide-react';
 
 interface Document {
   id: string;
@@ -51,13 +52,15 @@ interface DocumentsPageClientProps {
   organization: Organization | null;
   organizations?: Organization[];
   isAdmin?: boolean;
+  previewOrgName?: string;
 }
 
 export function DocumentsPageClient({
   documents,
   organization,
   organizations = [],
-  isAdmin = false
+  isAdmin = false,
+  previewOrgName,
 }: DocumentsPageClientProps) {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
@@ -118,12 +121,29 @@ export function DocumentsPageClient({
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: Home },
     { href: '/dashboard/documents', label: 'Documents', icon: FileText },
+    ...(organization?.hasClients ? [{ href: '/dashboard/clients', label: 'Clients', icon: Users }] : []),
     { href: '/history', label: 'History', icon: History },
   ];
 
   return (
     <MainLayout productName="Regulatory Intelligence" navItems={navItems}>
       <div className="max-w-7xl mx-auto">
+        {/* Preview Mode Banner */}
+        {previewOrgName && (
+          <div className="mb-6 flex items-center justify-between px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+            <span className="text-amber-800 font-medium">
+              Previewing as: <span className="font-bold">{previewOrgName}</span>
+            </span>
+            <Link
+              href="/dashboard/documents"
+              className="flex items-center gap-1 text-amber-700 hover:text-amber-900 font-medium transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Exit Preview
+            </Link>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">

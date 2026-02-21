@@ -4,7 +4,11 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { DocumentsPageClient } from './DocumentsPageClient';
 
-export default async function DocumentsPage() {
+export default async function DocumentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preview?: string }>;
+}) {
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
@@ -12,6 +16,7 @@ export default async function DocumentsPage() {
   }
 
   const user = session.user as any;
+  const { preview } = await searchParams;
 
   // Get user from database with organization
   const dbUser = await prisma.user.findUnique({
@@ -33,8 +38,58 @@ export default async function DocumentsPage() {
     redirect('/dashboard');
   }
 
-  // Admin view: show all documents from all organizations
   const isAdmin = dbUser.isAdmin;
+
+  // Admin previewing a specific org
+  if (isAdmin && preview) {
+    const previewOrg = await prisma.organization.findUnique({
+      where: { slug: preview },
+      include: {
+        organizationAgencies: {
+          include: { agency: true },
+        },
+      },
+    });
+
+    if (!previewOrg) {
+      redirect('/dashboard/documents');
+    }
+
+    const agencyIds = previewOrg.organizationAgencies.map(oa => oa.agencyId);
+
+    const documents = await prisma.regulatoryDocument.findMany({
+      where: { agencyId: { in: agencyIds } },
+      include: {
+        agency: true,
+        documentOutputs: {
+          where: { organizationId: previewOrg.id },
+          include: {
+            organization: {
+              select: { id: true, name: true, slug: true, outputType: true },
+            },
+            clientOutputs: {
+              where: { selectedForGeneration: true },
+              include: {
+                client: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { publicationDate: 'desc' },
+      take: 50,
+    });
+
+    return (
+      <DocumentsPageClient
+        documents={documents as any}
+        organization={previewOrg as any}
+        organizations={[previewOrg as any]}
+        isAdmin={false}
+        previewOrgName={previewOrg.name}
+      />
+    );
+  }
 
   let documents;
   let organizations;
@@ -84,7 +139,7 @@ export default async function DocumentsPage() {
       orderBy: {
         publicationDate: 'desc',
       },
-      take: 100, // Show more for admin
+      take: 100,
     });
   } else {
     // Regular user view: show only their org's documents
