@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
-import { Home, History, LogOut, ArrowRight } from 'lucide-react';
+import { Home, History, LogOut, ArrowRight, ShieldCheck } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { UploadZone } from '@/components/dashboard/UploadZone';
 import { JobCard } from '@/components/dashboard/JobCard';
@@ -101,16 +101,9 @@ export function DashboardClient({ user, profile, initialJobs }: DashboardClientP
   // Render
   // ---------------------------------------------------------------------------
   const navItems = [
-    {
-      href: '/dashboard',
-      label: 'Dashboard',
-      icon: Home,
-    },
-    {
-      href: '/history',
-      label: 'History',
-      icon: History,
-    },
+    { href: '/dashboard', label: 'Dashboard', icon: Home },
+    { href: '/history', label: 'History', icon: History },
+    ...(profile?.is_admin ? [{ href: '/admin', label: 'Admin', icon: ShieldCheck }] : []),
   ];
 
   return (

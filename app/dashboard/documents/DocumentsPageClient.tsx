@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { DocumentList } from '@/components/documents/DocumentList';
 import { ClientSelector } from '@/components/clients/ClientSelector';
-import { Home, FileText, History, Users, ArrowLeft } from 'lucide-react';
+import { Home, FileText, History, Users, ArrowLeft, ShieldCheck } from 'lucide-react';
 
 interface Document {
   id: string;
@@ -123,6 +123,7 @@ export function DocumentsPageClient({
     { href: '/dashboard/documents', label: 'Documents', icon: FileText },
     ...(organization?.hasClients ? [{ href: '/dashboard/clients', label: 'Clients', icon: Users }] : []),
     { href: '/history', label: 'History', icon: History },
+    ...(isAdmin && !previewOrgName ? [{ href: '/admin', label: 'Admin', icon: ShieldCheck }] : []),
   ];
 
   return (
@@ -157,14 +158,14 @@ export function DocumentsPageClient({
             {/* Organization Filter (Admin Only) */}
             {isAdmin && organizations.length > 0 && (
               <div className="flex items-center gap-2">
-                <label htmlFor="org-filter" className="text-sm font-medium text-gray-700">
+                <label htmlFor="org-filter" className="text-sm font-medium text-gray-700 dark:text-slate-300">
                   Organization:
                 </label>
                 <select
                   id="org-filter"
                   value={selectedOrgFilter}
                   onChange={(e) => setSelectedOrgFilter(e.target.value)}
-                  className="block rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
+                  className="block rounded-md border-gray-300 dark:border-white/10 dark:bg-[#1A2332] dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
                 >
                   <option value="all">All Organizations</option>
                   {organizations.map((org) => (
@@ -179,21 +180,21 @@ export function DocumentsPageClient({
 
           {/* Stats */}
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-sm font-medium text-gray-500">Total Documents</div>
-              <div className="mt-2 text-3xl font-semibold text-gray-900">
+            <div className="bg-white dark:bg-[#1A2332] rounded-lg shadow p-6">
+              <div className="text-sm font-medium text-gray-500 dark:text-slate-400">Total Documents</div>
+              <div className="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">
                 {filteredDocuments.length}
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-sm font-medium text-gray-500">Processed</div>
-              <div className="mt-2 text-3xl font-semibold text-gray-900">
+            <div className="bg-white dark:bg-[#1A2332] rounded-lg shadow p-6">
+              <div className="text-sm font-medium text-gray-500 dark:text-slate-400">Processed</div>
+              <div className="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">
                 {filteredDocuments.filter(d => d.documentOutputs.some(o => o.status === 'complete')).length}
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-sm font-medium text-gray-500">Pending</div>
-              <div className="mt-2 text-3xl font-semibold text-gray-900">
+            <div className="bg-white dark:bg-[#1A2332] rounded-lg shadow p-6">
+              <div className="text-sm font-medium text-gray-500 dark:text-slate-400">Pending</div>
+              <div className="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">
                 {filteredDocuments.filter(d => d.documentOutputs.every(o => o.status === 'pending')).length}
               </div>
             </div>

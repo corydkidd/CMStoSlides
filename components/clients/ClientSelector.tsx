@@ -126,20 +126,20 @@ export function ClientSelector({ document, onClose }: ClientSelectorProps) {
   const costEstimate = estimateMemoGenerationCost(selectedClientIds.size);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+      <div className="bg-white dark:bg-[#1A2332] rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-gray-200 dark:border-white/10">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h2 className="text-2xl font-bold text-gray-900">Select Clients for Memo Generation</h2>
-              <p className="mt-2 text-sm text-gray-600">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Select Clients for Memo Generation</h2>
+              <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
                 {document.title.substring(0, 100)}{document.title.length > 100 ? '...' : ''}
               </p>
             </div>
             <button
               onClick={onClose}
-              className="ml-4 text-gray-400 hover:text-gray-600 transition-colors"
+              className="ml-4 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -148,8 +148,8 @@ export function ClientSelector({ document, onClose }: ClientSelectorProps) {
           </div>
 
           {/* Cost Estimate */}
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-900">
+          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+            <p className="text-sm text-blue-900 dark:text-blue-300">
               <span className="font-medium">Estimated cost:</span> ${costEstimate.clientCost.toFixed(2)}
               {selectedClientIds.size > 0 && ` (${selectedClientIds.size} × $0.02)`}
             </p>
@@ -162,7 +162,7 @@ export function ClientSelector({ document, onClose }: ClientSelectorProps) {
           <div className="mb-4 space-y-3">
             <button
               onClick={handleSelectAll}
-              className="w-full px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+              className="w-full px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
             >
               {selectedClientIds.size === filteredClients.length ? 'Deselect All' : `Select All (${filteredClients.length} clients)`}
             </button>
@@ -172,22 +172,22 @@ export function ClientSelector({ document, onClose }: ClientSelectorProps) {
               placeholder="Search clients by name, industry, or focus areas..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-white/10 rounded-lg bg-white dark:bg-[#0A1628] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           {/* Client List */}
           {isLoading ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">Loading clients...</p>
+              <p className="text-gray-500 dark:text-slate-400">Loading clients...</p>
             </div>
           ) : error ? (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
+            <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-500/30 rounded-lg">
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
           ) : filteredClients.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">No clients found</p>
+              <p className="text-gray-500 dark:text-slate-400">No clients found</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -196,8 +196,8 @@ export function ClientSelector({ document, onClose }: ClientSelectorProps) {
                   key={client.id}
                   className={`block p-4 border rounded-lg cursor-pointer transition-colors ${
                     selectedClientIds.has(client.id)
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:bg-gray-50'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                      : 'border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'
                   }`}
                 >
                   <div className="flex items-start">
@@ -205,19 +205,19 @@ export function ClientSelector({ document, onClose }: ClientSelectorProps) {
                       type="checkbox"
                       checked={selectedClientIds.has(client.id)}
                       onChange={() => handleToggleClient(client.id)}
-                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-white/20 rounded"
                     />
                     <div className="ml-3 flex-1">
-                      <div className="font-medium text-gray-900">{client.name}</div>
+                      <div className="font-medium text-gray-900 dark:text-white">{client.name}</div>
                       {client.industry && (
-                        <div className="text-sm text-gray-600 mt-1">{client.industry}</div>
+                        <div className="text-sm text-gray-600 dark:text-slate-400 mt-1">{client.industry}</div>
                       )}
                       {client.focusAreas && client.focusAreas.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1">
                           {client.focusAreas.map((area, idx) => (
                             <span
                               key={idx}
-                              className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded"
+                              className="px-2 py-0.5 text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 rounded"
                             >
                               {area}
                             </span>
@@ -233,13 +233,13 @@ export function ClientSelector({ document, onClose }: ClientSelectorProps) {
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-200 bg-gray-50">
+        <div className="p-6 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#0A1628]">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-slate-400">
                 Selected: <span className="font-medium">{selectedClientIds.size}</span> clients
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 dark:text-slate-500 mt-1">
                 Est. cost: ${costEstimate.clientCost.toFixed(2)}
               </p>
             </div>
@@ -247,7 +247,7 @@ export function ClientSelector({ document, onClose }: ClientSelectorProps) {
               <button
                 onClick={onClose}
                 disabled={isGenerating}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-slate-300 bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg hover:bg-gray-50 dark:hover:bg-white/10 disabled:opacity-50 transition-colors"
               >
                 Cancel
               </button>

@@ -70,18 +70,20 @@ export function ClientForm({ client, onSuccess, onCancel }: ClientFormProps) {
     }
   };
 
+  const inputClass = "w-full px-3 py-2 border border-gray-300 dark:border-white/10 rounded-lg bg-white dark:bg-[#0A1628] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent";
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-[#1A2332] rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
             {client ? 'Edit Client' : 'Add New Client'}
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Name */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                 Client Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -90,14 +92,14 @@ export function ClientForm({ client, onSuccess, onCancel }: ClientFormProps) {
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={inputClass}
                 placeholder="e.g., Acme Therapeutics"
               />
             </div>
 
             {/* Industry */}
             <div>
-              <label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="industry" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                 Industry
               </label>
               <input
@@ -105,14 +107,14 @@ export function ClientForm({ client, onSuccess, onCancel }: ClientFormProps) {
                 id="industry"
                 value={formData.industry}
                 onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={inputClass}
                 placeholder="e.g., Biotechnology"
               />
             </div>
 
             {/* Focus Areas */}
             <div>
-              <label htmlFor="focus_areas" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="focus_areas" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                 Focus Areas
               </label>
               <input
@@ -120,17 +122,17 @@ export function ClientForm({ client, onSuccess, onCancel }: ClientFormProps) {
                 id="focus_areas"
                 value={formData.focus_areas}
                 onChange={(e) => setFormData({ ...formData, focus_areas: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={inputClass}
                 placeholder="e.g., CAR-T therapy, oncology, manufacturing (comma-separated)"
               />
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-500 dark:text-slate-500">
                 Enter multiple focus areas separated by commas
               </p>
             </div>
 
             {/* Context */}
             <div>
-              <label htmlFor="context" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="context" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                 Client Context <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -139,28 +141,28 @@ export function ClientForm({ client, onSuccess, onCancel }: ClientFormProps) {
                 rows={6}
                 value={formData.context}
                 onChange={(e) => setFormData({ ...formData, context: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={inputClass}
                 placeholder="Describe the client's business, focus areas, and regulatory concerns. This will be used to customize regulatory briefs. Be specific about their products, pipeline, and key decision makers."
               />
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-500 dark:text-slate-500">
                 This context helps AI customize regulatory briefs for this specific client
               </p>
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600">{error}</p>
+              <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-500/30 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
               </div>
             )}
 
             {/* Actions */}
-            <div className="flex gap-3 justify-end pt-4 border-t">
+            <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-white/10">
               <button
                 type="button"
                 onClick={onCancel}
                 disabled={isSubmitting}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-slate-300 bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg hover:bg-gray-50 dark:hover:bg-white/10 disabled:opacity-50 transition-colors"
               >
                 Cancel
               </button>

@@ -63,8 +63,8 @@ export function DocumentList({
 }: DocumentListProps) {
   if (documents.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-12 text-center">
-        <p className="text-gray-500">No documents found. Check back later.</p>
+      <div className="bg-white dark:bg-[#1A2332] rounded-lg shadow p-12 text-center">
+        <p className="text-gray-500 dark:text-slate-400">No documents found. Check back later.</p>
       </div>
     );
   }
@@ -84,14 +84,14 @@ export function DocumentList({
         const completedClientOutputs = clientOutputs.filter(co => co.status === 'complete');
 
         return (
-          <div key={doc.id} className="bg-white rounded-lg shadow p-6">
+          <div key={doc.id} className="bg-white dark:bg-[#1A2332] rounded-lg shadow p-6">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 {/* Title and Badges */}
                 <div className="flex items-start gap-3">
                   <div className="flex-1">
                     <div className="flex items-start gap-2">
-                      <h3 className="text-lg font-semibold text-gray-900 flex-1">{doc.title}</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex-1">{doc.title}</h3>
                       {doc.sourceUrl && (
                         <a
                           href={doc.sourceUrl}
@@ -107,14 +107,14 @@ export function DocumentList({
                   </div>
                   <div className="flex gap-2">
                     <SourceBadge source={doc.source} />
-                    <span className="px-2 py-1 text-xs font-medium bg-purple-50 text-purple-700 rounded">
+                    <span className="px-2 py-1 text-xs font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded">
                       {doc.agency.id.toUpperCase()}
                     </span>
                   </div>
                 </div>
 
                 {/* Metadata */}
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-slate-400">
                   {doc.publicationDate && (
                     <span>
                       {new Date(doc.publicationDate).toLocaleDateString()}
@@ -128,11 +128,11 @@ export function DocumentList({
                 <div className="mt-4 space-y-2">
                   {/* Base Output Status */}
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm font-medium text-gray-700 dark:text-slate-300">
                       Base {baseOutput?.organization?.outputType === 'pptx' ? 'PPTX' : 'Memo'}:
                     </span>
                     {!baseOutput && (
-                      <span className="text-sm text-gray-500">Not started</span>
+                      <span className="text-sm text-gray-500 dark:text-slate-500">Not started</span>
                     )}
                     {baseOutput && (
                       <>
@@ -140,23 +140,23 @@ export function DocumentList({
                           <span className="text-sm text-blue-600">⏳ Processing...</span>
                         )}
                         {isBaseComplete && (
-                          <span className="text-sm text-green-600">✓ Ready</span>
+                          <span className="text-sm text-green-600 dark:text-green-400">✓ Ready</span>
                         )}
                         {baseOutput.status === 'failed' && (
-                          <span className="text-sm text-red-600">✗ Failed</span>
+                          <span className="text-sm text-red-600 dark:text-red-400">✗ Failed</span>
                         )}
                         {baseOutput.status === 'pending' && (
-                          <span className="text-sm text-gray-500">⊙ Pending</span>
+                          <span className="text-sm text-gray-500 dark:text-slate-500">⊙ Pending</span>
                         )}
                       </>
                     )}
                   </div>
 
                   {/* Client Memos Status (if applicable) */}
-                  {organization.hasClients && baseOutput && (
+                  {organization?.hasClients && baseOutput && (
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-gray-700">Client memos:</span>
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Client memos:</span>
+                      <span className="text-sm text-gray-600 dark:text-slate-400">
                         {completedClientOutputs.length} of {clientOutputs.length} generated
                       </span>
                     </div>
@@ -195,17 +195,17 @@ export function DocumentList({
                 {isBaseComplete && baseOutput?.outputPath && (
                   <a
                     href={`/api/outputs/${baseOutput.id}/download`}
-                    className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors text-center whitespace-nowrap"
+                    className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-center whitespace-nowrap"
                   >
                     View Base
                   </a>
                 )}
 
                 {/* Select Clients */}
-                {organization.hasClients && isBaseComplete && (
+                {organization?.hasClients && isBaseComplete && (
                   <button
                     onClick={() => onSelectClients(doc)}
-                    className="px-4 py-2 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors whitespace-nowrap"
+                    className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors whitespace-nowrap"
                   >
                     Select Clients →
                   </button>
@@ -214,7 +214,7 @@ export function DocumentList({
                 {/* Download All (if multiple client outputs) */}
                 {completedClientOutputs.length > 0 && (
                   <button
-                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
+                    className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-slate-400 bg-gray-50 dark:bg-white/5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors whitespace-nowrap"
                   >
                     Download All ↓
                   </button>
@@ -224,14 +224,14 @@ export function DocumentList({
 
             {/* Client Output List (if any completed) */}
             {completedClientOutputs.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <p className="text-sm font-medium text-gray-700 mb-2">Generated Client Memos:</p>
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
+                <p className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Generated Client Memos:</p>
                 <div className="flex flex-wrap gap-2">
                   {completedClientOutputs.map((co) => (
                     <a
                       key={co.id}
                       href={`/api/client-outputs/${co.id}/download`}
-                      className="px-3 py-1 text-sm font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors"
+                      className="px-3 py-1 text-sm font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 rounded hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors"
                     >
                       {co.client.name}
                     </a>

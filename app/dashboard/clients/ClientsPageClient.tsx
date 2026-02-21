@@ -59,14 +59,14 @@ export function ClientsPageClient({ clients: initialClients, organization }: Cli
   const inactiveClients = clients.filter(c => !c.isActive);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0A1628]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Clients</h1>
-              <p className="mt-2 text-gray-600">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Clients</h1>
+              <p className="mt-2 text-gray-600 dark:text-slate-400">
                 Manage clients for {organization.name}
               </p>
             </div>
@@ -80,15 +80,15 @@ export function ClientsPageClient({ clients: initialClients, organization }: Cli
 
           {/* Stats */}
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-sm font-medium text-gray-500">Active Clients</div>
-              <div className="mt-2 text-3xl font-semibold text-gray-900">
+            <div className="bg-white dark:bg-[#1A2332] rounded-lg shadow p-6">
+              <div className="text-sm font-medium text-gray-500 dark:text-slate-400">Active Clients</div>
+              <div className="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">
                 {activeClients.length}
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-sm font-medium text-gray-500">Total Clients</div>
-              <div className="mt-2 text-3xl font-semibold text-gray-900">
+            <div className="bg-white dark:bg-[#1A2332] rounded-lg shadow p-6">
+              <div className="text-sm font-medium text-gray-500 dark:text-slate-400">Total Clients</div>
+              <div className="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">
                 {clients.length}
               </div>
             </div>
@@ -114,7 +114,7 @@ export function ClientsPageClient({ clients: initialClients, organization }: Cli
         {/* Inactive Clients */}
         {inactiveClients.length > 0 && (
           <div className="mt-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Inactive Clients</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Inactive Clients</h2>
             <ClientList
               clients={inactiveClients}
               onEdit={handleEdit}
