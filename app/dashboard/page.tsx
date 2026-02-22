@@ -27,6 +27,11 @@ export default async function DashboardPage() {
     redirect('/auth/signin');
   }
 
+  // Non-admin users land on the documents page (their primary view)
+  if (!dbUser.isAdmin) {
+    redirect('/dashboard/documents');
+  }
+
   // Fetch user's recent jobs
   const jobs = await prisma.conversionJob.findMany({
     where: { userId: dbUser.id },
