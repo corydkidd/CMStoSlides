@@ -1,6 +1,21 @@
 import { NextAuthOptions } from 'next-auth';
 import { prisma } from './db';
 
+async function sendNotification(app: string, event: string, message: string) {
+  const url = process.env.NOTIFY_URL;
+  const secret = process.env.NOTIFY_SECRET;
+  if (!url || !secret) return;
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Notify-Secret': secret },
+      body: JSON.stringify({ app, event, message }),
+    });
+  } catch (e) {
+    console.error('[Notify] Failed to send notification:', e);
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   trustHost: true,
   providers: [
@@ -188,6 +203,15 @@ export const authOptions: NextAuthOptions = {
               profileImage: user.image,
             },
           });
+        }
+
+        // Notify on non-admin logins
+        if (!dbUser.isAdmin) {
+          await sendNotification(
+            'Regulatory Intel',
+            'User login',
+            `${dbUser.name} (${dbUser.email}) logged in`
+          );
         }
 
         // Store the DB user id for token
