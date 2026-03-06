@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { DocumentList } from '@/components/documents/DocumentList';
 import { ClientSelector } from '@/components/clients/ClientSelector';
-import { Home, FileText, History, Users, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { Home, FileText, History, Users, ArrowLeft, ShieldCheck, BookOpen } from 'lucide-react';
 
 interface Document {
   id: string;
@@ -122,6 +122,7 @@ export function DocumentsPageClient({
     { href: '/dashboard', label: 'Dashboard', icon: Home },
     { href: '/dashboard/documents', label: 'Documents', icon: FileText },
     ...(organization?.hasClients ? [{ href: '/dashboard/clients', label: 'Clients', icon: Users }] : []),
+    { href: '/document-sets', label: 'Document Sets', icon: BookOpen },
     { href: '/history', label: 'History', icon: History },
     ...(isAdmin && !previewOrgName ? [{ href: '/admin', label: 'Admin', icon: ShieldCheck }] : []),
   ];

@@ -16,11 +16,18 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - CRON_SECRET=${CRON_SECRET}
       - UPLOAD_DIR=/app/data
+      - DOCSETS_DB_URL=postgresql://docsets_user:${DOCSETS_DB_PASSWORD}@docsets-db:5432/docsets
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - NOTIFY_URL=${NOTIFY_URL}
+      - NOTIFY_SECRET=${NOTIFY_SECRET}
     volumes:
       - /mnt/storage/projects/regulatory-intel/uploads:/app/data/uploads
       - /mnt/storage/projects/regulatory-intel/outputs:/app/data/outputs
+      - /mnt/storage/projects/regulatory-intel/docsets-uploads:/app/data/docsets
     depends_on:
       db:
+        condition: service_healthy
+      docsets-db:
         condition: service_healthy
     networks:
       - web
@@ -40,6 +47,41 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - web
+
+  docsets-db:
+    image: pgvector/pgvector:pg16
+    container_name: docsets-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: docsets_user
+      POSTGRES_PASSWORD: ${DOCSETS_DB_PASSWORD}
+      POSTGRES_DB: docsets
+    volumes:
+      - /mnt/storage/projects/regulatory-intel/docsets-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docsets_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - web
+
+  docsets-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: docsets-worker
+    restart: unless-stopped
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_URL=postgresql://docsets_user:${DOCSETS_DB_PASSWORD}@docsets-db:5432/docsets
+    volumes:
+      - /mnt/storage/projects/regulatory-intel/docsets-uploads:/app/uploads
+    depends_on:
+      docsets-db:
+        condition: service_healthy
     networks:
       - web
 
